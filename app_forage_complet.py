@@ -669,7 +669,7 @@ with tabs[10]:
     st.markdown("### 📊 Tableau SGI — Minéralisation & Teneur Or")
     sgi_table=df_intervals[df_intervals['trou']==trou_sgi][['de','a','lithologie','alteration','mineralisation','Au_ppb','Cu_ppm','As_ppm','mineralisé']].copy()
     sgi_table.columns=['De (m)','A (m)','Lithologie','Altération','Minéralisation','Au (ppb)','Cu (ppm)','As (ppm)','Minéralisé']
-    st.dataframe(sgi_table.style.applymap(
+    st.dataframe(sgi_table.style.map(
         lambda v:'background-color:#FFD700;color:black' if v==True else 'background-color:#F5F5F5' if v==False else '',
         subset=['Minéralisé']
     ).format({'Au (ppb)':'{:.2f}','Cu (ppm)':'{:.1f}','As (ppm)':'{:.1f}'}),use_container_width=True)
