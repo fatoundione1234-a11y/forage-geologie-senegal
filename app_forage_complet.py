@@ -72,7 +72,18 @@ for _,f in df_forages.iterrows():
         litho=LITHOS[litho_idx] if np.random.random()>0.3 else np.random.choice(LITHOS)
         alter=np.random.choice(ALTERATIONS)
         miner=np.random.choice(MINERALISATIONS,p=[0.15,0.10,0.15,0.10,0.15,0.35])
-        au=round(np.random.lognormal(2,1.5),2) if litho=='Quartzite aurifère' else round(np.random.lognormal(-2,1.5),3)
+        # Teneurs réalistes selon lithologie
+        if litho == 'Quartzite aurifère':
+            au = round(np.random.lognormal(5.5, 1.2), 2)  # ~300-2000 ppb
+        elif litho == 'Bédrock/Schiste':
+            au = round(np.random.lognormal(4.0, 1.5), 2)  # ~50-500 ppb
+        elif litho == 'Saprock':
+            au = round(np.random.lognormal(3.0, 1.2), 2)  # ~20-200 ppb
+        else:
+            au = round(np.random.lognormal(1.5, 1.0), 2)  # ~5-30 ppb
+        # Bonus si minéralisation aurifère
+        if miner in ['Aurifère disséminée', 'Aurifère filonienne']:
+            au = round(au * np.random.uniform(1.5, 4.0), 2)
         intervals.append({
             'trou':f['trou'],'type':f['type'],
             'de':round(depth,1),'a':round(min(depth+thick,f['profondeur']),1),
