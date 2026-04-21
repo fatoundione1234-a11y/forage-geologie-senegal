@@ -1120,4 +1120,618 @@ Pendage moyen: {pend_dom:.0f}°
     st.download_button("📥 Télécharger le rapport",data=rapport_txt,file_name=f"rapport_{NOM_PROSPECT}_{datetime.date.today()}.txt",mime='text/plain')
 
 st.markdown("---")
-st.caption(f"⛏️ {NOM_PROSPECT} | {NOM_PERMIS} | RC · Aircore · Diamond · SGI · Estimation · Cartographie · Graphiques structuraux")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DONNÉES SUPPLÉMENTAIRES — Extension, Échantillonnage, Mapping
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Programme extension
+extension_zones = pd.DataFrame([{
+    'zone': f'EXT{i+1:02d}',
+    'priorite': np.random.choice(['Haute','Moyenne','Faible'], p=[0.3,0.4,0.3]),
+    'easting': round(BASE_E + np.random.uniform(-600,600), 1),
+    'northing': round(BASE_N + np.random.uniform(-600,600), 1),
+    'profondeur_cible': np.random.choice([80,100,120,150,200]),
+    'azimut': round(np.random.uniform(0,360), 1),
+    'inclinaison': round(np.random.uniform(-85,-60), 1),
+    'type_forage': np.random.choice(['RC','Diamond'], p=[0.5,0.5]),
+    'Au_prevu_ppb': round(np.random.lognormal(4,1.2), 1),
+    'cout_usd': round(np.random.uniform(10000,50000), 0),
+    'justification': np.random.choice([
+        'Extension anomalie Au','Prolongement zone minéralisée',
+        'Test structure NE','Confirmation intersection','Approfondissement'
+    ]),
+    'statut': np.random.choice(['Planifié','Approuvé','En attente'], p=[0.5,0.3,0.2]),
+} for i in range(20)])
+
+# Échantillons
+np.random.seed(55)
+echantillons = pd.DataFrame([{
+    'id_ech': f'ECH{i+1:04d}',
+    'trou': f'SG{np.random.randint(1,16):03d}',
+    'type_ech': np.random.choice(['Carotte','Déblais RC','Rigole','Sol','Roche']),
+    'de': round(np.random.uniform(0,100), 1),
+    'poids_kg': round(np.random.uniform(0.5,5), 2),
+    'laboratoire': np.random.choice(['SGS Dakar','ALS Bamako','Intertek Conakry']),
+    'methode': np.random.choice(['ICP-MS','Fire Assay','AAS','FAAS']),
+    'Au_ppb': round(np.random.lognormal(3.5,1.5), 2),
+    'Cu_ppm': round(np.random.uniform(1,150), 1),
+    'As_ppm': round(np.random.uniform(1,80), 1),
+    'Ag_ppm': round(np.random.uniform(0.1,15), 2),
+    'Fe_pct': round(np.random.uniform(1,35), 2),
+    'date_envoi': (datetime.date.today()-datetime.timedelta(days=int(np.random.randint(1,60)))).strftime('%Y-%m-%d'),
+    'statut': np.random.choice(['Résultat reçu','En attente','En transit'], p=[0.6,0.3,0.1]),
+    'qaqc': np.random.choice(['Standard','Blanc','Duplicata','Normal'], p=[0.1,0.1,0.1,0.7]),
+} for i in range(200)])
+
+# ══ TAB 18 — PROGRAMME D'EXTENSION ═══════════════════════════════════════════
+st.markdown("---")
+st.header("🔭 Module Extension — Nouveaux onglets")
+
+ext_tabs = st.tabs([
+    "🔭 Programme d'extension",
+    "🗺️ Mapping & Analyse spatiale",
+    "🧪 Échantillonnage & Sampling",
+])
+
+# ── EXTENSION ─────────────────────────────────────────────────────────────────
+with ext_tabs[0]:
+    st.subheader(f"🔭 Programme de Forage d'Extension — {NOM_PROSPECT}")
+    st.markdown(f"**Permis :** {NOM_PERMIS} | **Date :** {datetime.date.today()}")
+
+    # KPIs
+    c1,c2,c3,c4,c5 = st.columns(5)
+    c1.metric("Zones d'extension", len(extension_zones))
+    c2.metric("Priorité Haute", int((extension_zones['priorite']=='Haute').sum()))
+    c3.metric("Approuvés", int((extension_zones['statut']=='Approuvé').sum()))
+    c4.metric("Mètres prévus", f"{extension_zones['profondeur_cible'].sum():.0f} m")
+    c5.metric("Budget total", f"${extension_zones['cout_usd'].sum():,.0f}")
+
+    col1,col2 = st.columns([2,1])
+    with col1:
+        # Carte des zones d'extension
+        fig_ext, ax_ext = plt.subplots(figsize=(11,9))
+        fig_ext.patch.set_facecolor('#F5F5F0'); ax_ext.set_facecolor('#E8F4F8')
+
+        # Forages existants
+        for _,f in df_forages.iterrows():
+            ax_ext.scatter(f['easting'], f['northing'], c='black', s=60,
+                          marker='o', zorder=3, label='Existant' if _ == 0 else '')
+            ax_ext.text(f['easting'], f['northing']+8, f['trou'], fontsize=5.5,
+                       ha='center', color='#1A237E')
+
+        # Zones d'extension par priorité
+        priority_colors = {'Haute':'#FF0000','Moyenne':'#FF9800','Faible':'#2196F3'}
+        priority_markers = {'Haute':'*','Moyenne':'^','Faible':'s'}
+        for _,z in extension_zones.iterrows():
+            color = priority_colors[z['priorite']]
+            marker = priority_markers[z['priorite']]
+            size = 300 if z['priorite']=='Haute' else 150 if z['priorite']=='Moyenne' else 80
+            ax_ext.scatter(z['easting'], z['northing'], c=color, s=size,
+                          marker=marker, edgecolors='black', linewidths=1,
+                          zorder=4, alpha=0.85)
+            ax_ext.text(z['easting'], z['northing']+10, z['zone'],
+                       fontsize=6, ha='center', color=color, fontweight='bold')
+            # Cercle de zone d'influence
+            if z['priorite'] == 'Haute':
+                circle = plt.Circle((z['easting'], z['northing']), 80,
+                                   fill=False, color='red', linewidth=1.5,
+                                   linestyle='--', alpha=0.5)
+                ax_ext.add_patch(circle)
+
+        # Nord & Échelle
+        xmax = max(df_forages['easting'].max(), extension_zones['easting'].max())
+        ymax = max(df_forages['northing'].max(), extension_zones['northing'].max())
+        xmin = min(df_forages['easting'].min(), extension_zones['easting'].min())
+        ymin = min(df_forages['northing'].min(), extension_zones['northing'].min())
+        ax_ext.annotate('', xy=(xmax+80,ymax+20), xytext=(xmax+80,ymax-30),
+                       arrowprops=dict(arrowstyle='->', color='black', lw=2.5))
+        ax_ext.text(xmax+80, ymax+35, 'N', ha='center', fontsize=14, fontweight='bold')
+        ax_ext.plot([xmin, xmin+300], [ymin-50, ymin-50], 'k-', linewidth=3)
+        ax_ext.text(xmin+150, ymin-70, '300 m', ha='center', fontsize=9, fontweight='bold')
+
+        # Légende
+        legend_ext = [
+            plt.Line2D([0],[0], marker='*', color='w', markerfacecolor='red', markersize=14, label='Haute priorité'),
+            plt.Line2D([0],[0], marker='^', color='w', markerfacecolor='#FF9800', markersize=10, label='Moyenne priorité'),
+            plt.Line2D([0],[0], marker='s', color='w', markerfacecolor='#2196F3', markersize=9, label='Faible priorité'),
+            plt.Line2D([0],[0], marker='o', color='w', markerfacecolor='black', markersize=8, label='Forage existant'),
+        ]
+        ax_ext.legend(handles=legend_ext, loc='lower right', fontsize=8,
+                     title='Programme extension', framealpha=0.95)
+        ax_ext.set_xlabel("Easting UTM (m)"); ax_ext.set_ylabel("Northing UTM (m)")
+        ax_ext.set_title(f"Carte programme d'extension — {NOM_PROSPECT}\n{NOM_PERMIS}",
+                        fontsize=12, fontweight='bold')
+        ax_ext.grid(True, linestyle='--', alpha=0.4)
+        plt.tight_layout(); st.pyplot(fig_ext)
+
+    with col2:
+        st.markdown("### 📊 Résumé par priorité")
+        for prio, color in priority_colors.items():
+            sub = extension_zones[extension_zones['priorite']==prio]
+            st.markdown(f"**{prio}** : {len(sub)} zones | {sub['profondeur_cible'].sum():.0f}m | ${sub['cout_usd'].sum():,.0f}")
+
+        st.markdown("### 📈 Coût par type")
+        fig_cout, ax_cout = plt.subplots(figsize=(5,3))
+        cout_type = extension_zones.groupby('type_forage')['cout_usd'].sum()
+        ax_cout.bar(cout_type.index, cout_type.values, color=['#FF5722','#9C27B0'],
+                   edgecolor='black', linewidth=0.5)
+        ax_cout.set_ylabel("Coût (USD)"); ax_cout.set_title("Budget par type", fontsize=9)
+        for i,v in enumerate(cout_type.values):
+            ax_cout.text(i, v+500, f"${v:,.0f}", ha='center', fontsize=8, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_cout)
+
+    # Tableau détaillé
+    st.markdown("### 📋 Tableau du programme d'extension")
+    filtre_prio = st.multiselect("Filtrer par priorité",
+                                  ['Haute','Moyenne','Faible'],
+                                  default=['Haute','Moyenne','Faible'])
+    df_ext_filt = extension_zones[extension_zones['priorite'].isin(filtre_prio)]
+    st.dataframe(df_ext_filt.rename(columns={
+        'zone':'Zone','priorite':'Priorité','easting':'Easting(m)','northing':'Northing(m)',
+        'profondeur_cible':'Prof. cible(m)','azimut':'Azimut(°)','inclinaison':'Inclin.(°)',
+        'type_forage':'Type','Au_prevu_ppb':'Au prévu(ppb)','cout_usd':'Coût(USD)',
+        'justification':'Justification','statut':'Statut'
+    }), use_container_width=True)
+
+    # Analyse risque/bénéfice
+    st.markdown("### ⚖️ Analyse Risque / Bénéfice")
+    fig_rb, ax_rb = plt.subplots(figsize=(8,5))
+    colors_prio = [priority_colors[p] for p in extension_zones['priorite']]
+    sc = ax_rb.scatter(extension_zones['cout_usd']/1000,
+                      extension_zones['Au_prevu_ppb'],
+                      c=[{'Haute':3,'Moyenne':2,'Faible':1}[p] for p in extension_zones['priorite']],
+                      cmap='RdYlGn', s=150, edgecolors='black', linewidths=0.8,
+                      alpha=0.85, zorder=3)
+    for _,z in extension_zones.iterrows():
+        ax_rb.text(z['cout_usd']/1000+0.3, z['Au_prevu_ppb'],
+                  z['zone'], fontsize=6.5, color='#333')
+    ax_rb.set_xlabel("Coût estimé (k$)"); ax_rb.set_ylabel("Au prévu (ppb)")
+    ax_rb.set_title("Analyse Risque/Bénéfice — Zones d'extension", fontsize=11, fontweight='bold')
+    plt.colorbar(sc, ax=ax_rb, label='Priorité (1=Faible, 3=Haute)')
+    ax_rb.grid(True, linestyle=':', alpha=0.4)
+    plt.tight_layout(); st.pyplot(fig_rb)
+
+    st.warning(f"""
+    📌 **Recommandations d'extension :**
+    - **{len(extension_zones[extension_zones['priorite']=='Haute'])} zones haute priorité** à forer en premier
+    - Budget total estimé : **${extension_zones['cout_usd'].sum():,.0f} USD**
+    - Forer en priorité les zones EXT avec Au prévu > 200 ppb
+    - Commencer par les RC pour confirmer, puis Diamond pour les meilleures zones
+    """)
+    csv_ext = extension_zones.to_csv(index=False)
+    st.download_button("📥 Télécharger programme extension",
+                      data=csv_ext, file_name="programme_extension.csv", mime='text/csv')
+
+# ── MAPPING & ANALYSE SPATIALE ────────────────────────────────────────────────
+with ext_tabs[1]:
+    st.subheader(f"🗺️ Mapping & Analyse Spatiale des Gisements — {NOM_PROSPECT}")
+
+    analyse_type = st.radio("Type d'analyse",
+                           ['Densité des minéralisations','Variogramme expérimental',
+                            'Analyse de clusters','Corrélation spatiale'],
+                           horizontal=True)
+
+    if analyse_type == 'Densité des minéralisations':
+        st.markdown("### 🔥 Carte de densité des teneurs en or")
+        au_par_trou = df_intervals.groupby('trou')['Au_ppb'].max().reset_index()
+        au_par_trou.columns = ['trou','Au_max']
+        df_spatial = df_forages.merge(au_par_trou, on='trou')
+
+        fig_dens, axes_dens = plt.subplots(1,2, figsize=(14,7))
+
+        # Carte de chaleur
+        if len(df_spatial) > 3:
+            xi = np.linspace(df_spatial['easting'].min()-100, df_spatial['easting'].max()+100, 200)
+            yi = np.linspace(df_spatial['northing'].min()-100, df_spatial['northing'].max()+100, 200)
+            Xi, Yi = np.meshgrid(xi, yi)
+            Zi = griddata((df_spatial['easting'], df_spatial['northing']),
+                         df_spatial['Au_max'], (Xi, Yi), method='cubic')
+            im = axes_dens[0].contourf(Xi, Yi, Zi, levels=25, cmap='YlOrRd', alpha=0.85)
+            plt.colorbar(im, ax=axes_dens[0], label='Au max (ppb)')
+            axes_dens[0].contour(Xi, Yi, Zi, levels=8, colors='black', alpha=0.3, linewidths=0.5)
+
+        for _,f in df_spatial.iterrows():
+            marker = {'RC':'^','Aircore':'o','Diamond':'s'}.get(f['type'],'o')
+            axes_dens[0].scatter(f['easting'], f['northing'], c='white', s=80,
+                               marker=marker, edgecolors='black', linewidths=1, zorder=4)
+            axes_dens[0].text(f['easting'], f['northing']+8, f['trou'],
+                             fontsize=6, ha='center', color='black', fontweight='bold')
+
+        xmax=df_spatial['easting'].max(); ymax=df_spatial['northing'].max()
+        xmin=df_spatial['easting'].min(); ymin=df_spatial['northing'].min()
+        axes_dens[0].annotate('',xy=(xmax+60,ymax+20),xytext=(xmax+60,ymax-20),
+                             arrowprops=dict(arrowstyle='->',color='black',lw=2))
+        axes_dens[0].text(xmax+60,ymax+30,'N',ha='center',fontsize=12,fontweight='bold')
+        axes_dens[0].plot([xmin,xmin+200],[ymin-40,ymin-40],'k-',linewidth=3)
+        axes_dens[0].text(xmin+100,ymin-55,'200 m',ha='center',fontsize=8,fontweight='bold')
+        axes_dens[0].set_xlabel("Easting (m)"); axes_dens[0].set_ylabel("Northing (m)")
+        axes_dens[0].set_title(f"Carte de densité Au — {NOM_PROSPECT}", fontsize=11, fontweight='bold')
+        axes_dens[0].grid(True, linestyle=':', alpha=0.3)
+
+        # Distribution des teneurs
+        axes_dens[1].hist(np.log10(df_spatial['Au_max']+1), bins=15,
+                         color='#FFD700', edgecolor='black', linewidth=0.5)
+        axes_dens[1].set_xlabel("log10(Au max + 1) [ppb]")
+        axes_dens[1].set_ylabel("Fréquence")
+        axes_dens[1].set_title("Distribution log-normale des teneurs", fontsize=11, fontweight='bold')
+        axes_dens[1].axvline(np.log10(100+1), color='red', linestyle='--', linewidth=2,
+                            label='Seuil 100 ppb')
+        axes_dens[1].legend(fontsize=9)
+        axes_dens[1].grid(True, linestyle=':', alpha=0.4)
+        plt.suptitle(f"Analyse spatiale — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_dens)
+
+    elif analyse_type == 'Variogramme expérimental':
+        st.markdown("### 📐 Variogramme expérimental — Continuité spatiale")
+        au_par_trou = df_intervals.groupby('trou')['Au_ppb'].max().reset_index()
+        au_par_trou.columns = ['trou','Au']
+        df_var = df_forages.merge(au_par_trou, on='trou')
+
+        # Calcul variogramme expérimental
+        distances = []
+        variogrammes = []
+        coords = df_var[['easting','northing']].values
+        values = np.log1p(df_var['Au'].values)
+        n = len(coords)
+        for i in range(n):
+            for j in range(i+1, n):
+                d = np.sqrt((coords[i,0]-coords[j,0])**2 + (coords[i,1]-coords[j,1])**2)
+                g = 0.5*(values[i]-values[j])**2
+                distances.append(d); variogrammes.append(g)
+        distances = np.array(distances); variogrammes = np.array(variogrammes)
+        bins = np.linspace(0, distances.max(), 12)
+        gamma_bins = []
+        dist_bins = []
+        for k in range(len(bins)-1):
+            mask = (distances>=bins[k]) & (distances<bins[k+1])
+            if mask.sum()>0:
+                gamma_bins.append(variogrammes[mask].mean())
+                dist_bins.append((bins[k]+bins[k+1])/2)
+        gamma_bins = np.array(gamma_bins); dist_bins = np.array(dist_bins)
+
+        fig_var, axes_var = plt.subplots(1,2, figsize=(12,5))
+        axes_var[0].scatter(dist_bins, gamma_bins, c='#2196F3', s=100,
+                           edgecolors='black', linewidths=1, zorder=3)
+        axes_var[0].plot(dist_bins, gamma_bins, 'b--', linewidth=1.5, alpha=0.6)
+        # Modèle sphérique ajusté
+        nugget = gamma_bins[0] if len(gamma_bins)>0 else 0.1
+        sill = gamma_bins.max() if len(gamma_bins)>0 else 1
+        range_var = dist_bins[len(dist_bins)//2] if len(dist_bins)>0 else 200
+        h = np.linspace(0, dist_bins.max() if len(dist_bins)>0 else 500, 100)
+        model = nugget + (sill-nugget)*(1.5*(h/range_var)-0.5*(h/range_var)**3)
+        model = np.where(h>range_var, sill, model)
+        axes_var[0].plot(h, model, 'r-', linewidth=2.5, label=f'Modèle sphérique\nNugget:{nugget:.2f} Sill:{sill:.2f} Range:{range_var:.0f}m')
+        axes_var[0].set_xlabel("Distance (m)"); axes_var[0].set_ylabel("γ(h) — Semi-variance")
+        axes_var[0].set_title("Variogramme expérimental — Au", fontsize=11, fontweight='bold')
+        axes_var[0].legend(fontsize=8); axes_var[0].grid(True, linestyle=':', alpha=0.4)
+
+        # Rose des variogrammes directionnels
+        ax_vr = fig_var.add_subplot(1,2,2, projection='polar')
+        directions_v = np.linspace(0, np.pi, 8)
+        var_dir = np.random.uniform(0.5, 2.0, 8)
+        var_dir_sym = np.concatenate([var_dir, var_dir])
+        theta_v = np.concatenate([directions_v, directions_v+np.pi])
+        ax_vr.bar(theta_v, var_dir_sym, width=np.pi/8, color='steelblue',
+                 edgecolor='black', alpha=0.7)
+        ax_vr.set_theta_zero_location('N'); ax_vr.set_theta_direction(-1)
+        ax_vr.set_title("Variogramme directionnel\n(anisotropie)", fontsize=10, fontweight='bold', pad=20)
+        ax_vr.set_xticklabels(['N','NE','E','SE','S','SO','O','NO'])
+        plt.suptitle(f"Analyse variographique — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_var)
+
+        st.info(f"""
+        📐 **Paramètres du variogramme :**
+        - **Nugget (effet pépite) :** {nugget:.2f} — variabilité à petite échelle
+        - **Sill (palier) :** {sill:.2f} — variance totale du gisement
+        - **Range (portée) :** {range_var:.0f} m — distance de corrélation spatiale
+        - **Interprétation :** Continuité spatiale sur ~{range_var:.0f}m — espacer les forages à max {range_var*0.6:.0f}m
+        """)
+
+    elif analyse_type == 'Analyse de clusters':
+        st.markdown("### 🔵 Analyse de clusters — Regroupement spatial")
+        au_par_trou = df_intervals.groupby('trou')['Au_ppb'].max().reset_index()
+        au_par_trou.columns = ['trou','Au']
+        df_clust = df_forages.merge(au_par_trou, on='trou')
+
+        # K-means simplifié
+        from sklearn.cluster import KMeans
+        coords_c = df_clust[['easting','northing']].values
+        n_clusters = st.slider("Nombre de clusters", 2, 6, 3)
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        df_clust['cluster'] = kmeans.fit_predict(coords_c)
+        centers = kmeans.cluster_centers_
+
+        fig_cl, axes_cl = plt.subplots(1,2, figsize=(14,6))
+        cluster_colors = ['#FF5722','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4']
+        for cl in range(n_clusters):
+            sub = df_clust[df_clust['cluster']==cl]
+            axes_cl[0].scatter(sub['easting'], sub['northing'],
+                              c=cluster_colors[cl], s=150,
+                              edgecolors='black', linewidths=1, label=f'Cluster {cl+1}',
+                              zorder=3, alpha=0.85)
+            for _,f in sub.iterrows():
+                axes_cl[0].text(f['easting'], f['northing']+8, f['trou'],
+                               fontsize=6, ha='center')
+        axes_cl[0].scatter(centers[:,0], centers[:,1], c='black', s=300,
+                          marker='X', zorder=5, label='Centroïdes')
+        axes_cl[0].legend(fontsize=8); axes_cl[0].grid(True, linestyle=':', alpha=0.4)
+        axes_cl[0].set_xlabel("Easting (m)"); axes_cl[0].set_ylabel("Northing (m)")
+        axes_cl[0].set_title(f"Clusters spatiaux ({n_clusters} groupes)", fontsize=11, fontweight='bold')
+
+        # Au par cluster
+        cluster_au = df_clust.groupby('cluster')['Au'].agg(['mean','max','count']).reset_index()
+        x_cl = [f'Cluster {c+1}' for c in cluster_au['cluster']]
+        axes_cl[1].bar(x_cl, cluster_au['mean'], color=[cluster_colors[c] for c in cluster_au['cluster']],
+                      edgecolor='black', linewidth=0.5, label='Au moyen')
+        axes_cl[1].scatter(x_cl, cluster_au['max'], c='black', s=100, zorder=3, label='Au max', marker='D')
+        axes_cl[1].set_ylabel("Au (ppb)"); axes_cl[1].set_title("Au par cluster", fontsize=11, fontweight='bold')
+        axes_cl[1].legend(fontsize=9); axes_cl[1].grid(True, linestyle=':', alpha=0.4)
+        plt.suptitle(f"Analyse de clusters — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_cl)
+
+        best_cl = cluster_au.loc[cluster_au['mean'].idxmax(), 'cluster']
+        st.success(f"**Cluster {best_cl+1}** est le plus prometteur avec Au moyen = {cluster_au.loc[best_cl,'mean']:.1f} ppb")
+
+    else:  # Corrélation spatiale
+        st.markdown("### 🔗 Corrélation spatiale multi-éléments")
+        au_moy = df_intervals.groupby('trou')[['Au_ppb','Cu_ppm','As_ppm','Ag_ppm']].mean().reset_index()
+        df_corr = df_forages.merge(au_moy, on='trou')
+
+        fig_corr, axes_corr = plt.subplots(2,2, figsize=(12,10))
+        paires = [('Au_ppb','As_ppm'),('Au_ppb','Cu_ppm'),('Au_ppb','Ag_ppm'),('As_ppm','Cu_ppm')]
+        colors_scatter = ['#FF5722','#2196F3','#4CAF50','#FF9800']
+        for ax_c, (x_col,y_col), color in zip(axes_corr.flatten(), paires, colors_scatter):
+            ax_c.scatter(df_corr[x_col], df_corr[y_col], c=color, s=80,
+                        edgecolors='black', linewidths=0.5, alpha=0.85)
+            # Régression linéaire
+            if len(df_corr)>2:
+                z = np.polyfit(df_corr[x_col], df_corr[y_col], 1)
+                p = np.poly1d(z)
+                x_line = np.linspace(df_corr[x_col].min(), df_corr[x_col].max(), 50)
+                ax_c.plot(x_line, p(x_line), 'r--', linewidth=2)
+                r = np.corrcoef(df_corr[x_col], df_corr[y_col])[0,1]
+                ax_c.text(0.05, 0.95, f'r = {r:.2f}', transform=ax_c.transAxes,
+                         fontsize=10, fontweight='bold', color='red',
+                         verticalalignment='top',
+                         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            for _,row in df_corr.iterrows():
+                ax_c.text(row[x_col], row[y_col]+0.5, row['trou'],
+                         fontsize=5.5, ha='center', color='#333')
+            ax_c.set_xlabel(x_col); ax_c.set_ylabel(y_col)
+            ax_c.set_title(f"{x_col} vs {y_col}", fontsize=10, fontweight='bold')
+            ax_c.grid(True, linestyle=':', alpha=0.4)
+        plt.suptitle(f"Corrélations spatiales multi-éléments — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_corr)
+
+# ── ÉCHANTILLONNAGE & SAMPLING ─────────────────────────────────────────────────
+with ext_tabs[2]:
+    st.subheader(f"🧪 Échantillonnage & Sampling — {NOM_PROSPECT}")
+
+    sampling_vue = st.radio("Module",
+                           ['Vue d\'ensemble','Registre des échantillons',
+                            'Contrôle qualité QAQC','Analyse des résultats',
+                            'Statistiques'],
+                           horizontal=True)
+
+    if sampling_vue == "Vue d'ensemble":
+        c1,c2,c3,c4,c5 = st.columns(5)
+        c1.metric("Total échantillons", len(echantillons))
+        c2.metric("Résultats reçus", int((echantillons['statut']=='Résultat reçu').sum()))
+        c3.metric("En attente", int((echantillons['statut']=='En attente').sum()))
+        c4.metric("Au max", f"{echantillons['Au_ppb'].max():.1f} ppb")
+        c5.metric("Au moyen", f"{echantillons['Au_ppb'].mean():.1f} ppb")
+
+        fig_ov, axes_ov = plt.subplots(1,3, figsize=(14,4))
+        # Statuts
+        stat_counts = echantillons['statut'].value_counts()
+        axes_ov[0].pie(stat_counts.values, labels=stat_counts.index,
+                      autopct='%1.0f%%', colors=['#4CAF50','#FF9800','#2196F3'])
+        axes_ov[0].set_title("Statut des analyses", fontsize=10, fontweight='bold')
+        # Types
+        type_counts = echantillons['type_ech'].value_counts()
+        axes_ov[1].bar(type_counts.index, type_counts.values,
+                      color='steelblue', edgecolor='black', linewidth=0.5)
+        axes_ov[1].set_ylabel("Nombre"); axes_ov[1].set_title("Types d'échantillons", fontsize=10, fontweight='bold')
+        plt.setp(axes_ov[1].xaxis.get_majorticklabels(), rotation=30, fontsize=8)
+        # Laboratoires
+        labo_counts = echantillons['laboratoire'].value_counts()
+        axes_ov[2].bar(labo_counts.index, labo_counts.values,
+                      color=['#FF5722','#2196F3','#4CAF50'], edgecolor='black', linewidth=0.5)
+        axes_ov[2].set_ylabel("Nombre"); axes_ov[2].set_title("Par laboratoire", fontsize=10, fontweight='bold')
+        plt.setp(axes_ov[2].xaxis.get_majorticklabels(), rotation=20, fontsize=8)
+        plt.suptitle(f"Vue d'ensemble sampling — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_ov)
+
+    elif sampling_vue == "Registre des échantillons":
+        st.markdown("### 📋 Registre complet des échantillons")
+        col1, col2 = st.columns(2)
+        with col1:
+            filtre_type = st.multiselect("Type", echantillons['type_ech'].unique(),
+                                         default=list(echantillons['type_ech'].unique()))
+        with col2:
+            filtre_labo = st.multiselect("Laboratoire", echantillons['laboratoire'].unique(),
+                                          default=list(echantillons['laboratoire'].unique()))
+        df_reg = echantillons[(echantillons['type_ech'].isin(filtre_type)) &
+                              (echantillons['laboratoire'].isin(filtre_labo))]
+        st.dataframe(df_reg[['id_ech','trou','type_ech','de','poids_kg','laboratoire',
+                              'methode','Au_ppb','Cu_ppm','As_ppm','statut','qaqc']].rename(columns={
+            'id_ech':'N° Ech','trou':'Trou','type_ech':'Type','de':'De(m)',
+            'poids_kg':'Poids(kg)','laboratoire':'Labo','methode':'Méthode',
+            'Au_ppb':'Au(ppb)','Cu_ppm':'Cu(ppm)','As_ppm':'As(ppm)',
+            'statut':'Statut','qaqc':'QAQC'
+        }), use_container_width=True)
+        csv_ech = df_reg.to_csv(index=False)
+        st.download_button("📥 Télécharger registre", data=csv_ech,
+                          file_name="registre_echantillons.csv", mime='text/csv')
+
+    elif sampling_vue == "Contrôle qualité QAQC":
+        st.markdown("### ✅ Contrôle Qualité QAQC")
+        standards = echantillons[echantillons['qaqc']=='Standard']
+        blancs = echantillons[echantillons['qaqc']=='Blanc']
+        duplicatas = echantillons[echantillons['qaqc']=='Duplicata']
+
+        c1,c2,c3,c4 = st.columns(4)
+        c1.metric("Standards", len(standards))
+        c2.metric("Blancs", len(blancs))
+        c3.metric("Duplicatas", len(duplicatas))
+        c4.metric("Taux QAQC", f"{(len(standards)+len(blancs)+len(duplicatas))/len(echantillons)*100:.1f}%")
+
+        fig_qaqc, axes_qaqc = plt.subplots(2,2, figsize=(12,9))
+
+        # Standards — vérification de la précision
+        if len(standards) > 0:
+            valeur_certifiee = 250
+            axes_qaqc[0,0].scatter(range(len(standards)), standards['Au_ppb'],
+                                  c='#2196F3', s=60, edgecolors='black', linewidths=0.5, label='Résultats')
+            axes_qaqc[0,0].axhline(y=valeur_certifiee, color='green', linewidth=2,
+                                  linestyle='-', label=f'Certifié: {valeur_certifiee} ppb')
+            axes_qaqc[0,0].axhline(y=valeur_certifiee*1.1, color='orange', linewidth=1.5,
+                                  linestyle='--', label='+10%')
+            axes_qaqc[0,0].axhline(y=valeur_certifiee*0.9, color='orange', linewidth=1.5,
+                                  linestyle='--', label='-10%')
+            axes_qaqc[0,0].axhline(y=valeur_certifiee*1.2, color='red', linewidth=1,
+                                  linestyle=':', label='+20%')
+            axes_qaqc[0,0].axhline(y=valeur_certifiee*0.8, color='red', linewidth=1,
+                                  linestyle=':', label='-20%')
+            axes_qaqc[0,0].set_xlabel("N° standard"); axes_qaqc[0,0].set_ylabel("Au (ppb)")
+            axes_qaqc[0,0].set_title("Standards de référence — Précision", fontsize=10, fontweight='bold')
+            axes_qaqc[0,0].legend(fontsize=7)
+
+        # Blancs — vérification contamination
+        if len(blancs) > 0:
+            axes_qaqc[0,1].scatter(range(len(blancs)), blancs['Au_ppb'],
+                                  c='#FF5722', s=60, edgecolors='black', linewidths=0.5)
+            axes_qaqc[0,1].axhline(y=10, color='red', linewidth=2, linestyle='--',
+                                  label='Seuil contamination: 10 ppb')
+            contamines = (blancs['Au_ppb'] > 10).sum()
+            axes_qaqc[0,1].set_xlabel("N° blanc"); axes_qaqc[0,1].set_ylabel("Au (ppb)")
+            axes_qaqc[0,1].set_title(f"Blancs — Contamination ({contamines} dépassements)",
+                                    fontsize=10, fontweight='bold')
+            axes_qaqc[0,1].legend(fontsize=8)
+
+        # Duplicatas — reproductibilité
+        if len(duplicatas) > 1:
+            n_dup = len(duplicatas)//2
+            orig = duplicatas.iloc[:n_dup]['Au_ppb'].values
+            dup = duplicatas.iloc[n_dup:n_dup+min(n_dup,len(duplicatas)-n_dup)]['Au_ppb'].values
+            min_len = min(len(orig),len(dup))
+            axes_qaqc[1,0].scatter(orig[:min_len], dup[:min_len],
+                                  c='#4CAF50', s=60, edgecolors='black', linewidths=0.5)
+            max_val = max(orig[:min_len].max(), dup[:min_len].max())
+            axes_qaqc[1,0].plot([0,max_val],[0,max_val],'r-',linewidth=2,label='1:1')
+            axes_qaqc[1,0].plot([0,max_val],[0,max_val*1.1],'--',color='orange',linewidth=1,label='+10%')
+            axes_qaqc[1,0].plot([0,max_val],[0,max_val*0.9],'--',color='orange',linewidth=1,label='-10%')
+            axes_qaqc[1,0].set_xlabel("Original (ppb)"); axes_qaqc[1,0].set_ylabel("Duplicata (ppb)")
+            axes_qaqc[1,0].set_title("Duplicatas — Reproductibilité", fontsize=10, fontweight='bold')
+            axes_qaqc[1,0].legend(fontsize=7)
+
+        # Résumé QAQC
+        qaqc_summary = echantillons['qaqc'].value_counts()
+        axes_qaqc[1,1].bar(qaqc_summary.index, qaqc_summary.values,
+                          color=['#2196F3','#FF5722','#4CAF50','#FF9800'],
+                          edgecolor='black', linewidth=0.5)
+        axes_qaqc[1,1].set_ylabel("Nombre"); axes_qaqc[1,1].set_title("Résumé QAQC", fontsize=10, fontweight='bold')
+        for i,v in enumerate(qaqc_summary.values):
+            axes_qaqc[1,1].text(i, v+0.5, str(v), ha='center', fontsize=9, fontweight='bold')
+
+        plt.suptitle(f"Contrôle qualité QAQC — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_qaqc)
+
+        pct_valide = (len(standards)+len(blancs)+len(duplicatas))/len(echantillons)*100
+        if pct_valide >= 10:
+            st.success(f"✅ Taux QAQC : **{pct_valide:.1f}%** — Conforme aux bonnes pratiques (min. 10%)")
+        else:
+            st.error(f"⚠️ Taux QAQC : **{pct_valide:.1f}%** — En dessous du minimum recommandé (10%)")
+
+    elif sampling_vue == "Analyse des résultats":
+        st.markdown("### 📊 Analyse des résultats analytiques")
+        fig_res, axes_res = plt.subplots(2,2, figsize=(12,9))
+
+        # Distribution Au
+        ech_res = echantillons[echantillons['statut']=='Résultat reçu']
+        axes_res[0,0].hist(np.log10(ech_res['Au_ppb']+0.01), bins=25,
+                          color='#FFD700', edgecolor='black', linewidth=0.5)
+        axes_res[0,0].set_xlabel("log10(Au ppb)"); axes_res[0,0].set_ylabel("Fréquence")
+        axes_res[0,0].set_title("Distribution Au (log-normale)", fontsize=10, fontweight='bold')
+        axes_res[0,0].axvline(np.log10(100), color='red', linestyle='--', linewidth=2, label='100 ppb')
+        axes_res[0,0].legend(fontsize=8)
+
+        # Au par type d'échantillon
+        au_type = ech_res.groupby('type_ech')['Au_ppb'].agg(['mean','max']).reset_index()
+        x_pos = range(len(au_type))
+        axes_res[0,1].bar([i-0.2 for i in x_pos], au_type['mean'], width=0.4,
+                         color='#FFD700', edgecolor='black', linewidth=0.5, label='Moyen')
+        axes_res[0,1].bar([i+0.2 for i in x_pos], au_type['max'], width=0.4,
+                         color='#FF5722', edgecolor='black', linewidth=0.5, label='Max')
+        axes_res[0,1].set_xticks(list(x_pos)); axes_res[0,1].set_xticklabels(au_type['type_ech'], fontsize=8, rotation=20)
+        axes_res[0,1].set_ylabel("Au (ppb)"); axes_res[0,1].set_title("Au par type d'échantillon", fontsize=10, fontweight='bold')
+        axes_res[0,1].legend(fontsize=8)
+
+        # Évolution temporelle
+        ech_res_dt = ech_res.copy()
+        ech_res_dt['date_envoi'] = pd.to_datetime(ech_res_dt['date_envoi'])
+        ech_daily = ech_res_dt.groupby('date_envoi')['Au_ppb'].mean().reset_index()
+        if len(ech_daily) > 1:
+            axes_res[1,0].plot(ech_daily['date_envoi'], ech_daily['Au_ppb'],
+                              'b-o', markersize=5, linewidth=1.5)
+            axes_res[1,0].fill_between(ech_daily['date_envoi'], ech_daily['Au_ppb'],
+                                      alpha=0.3, color='blue')
+            axes_res[1,0].set_xlabel("Date"); axes_res[1,0].set_ylabel("Au moyen (ppb)")
+            axes_res[1,0].set_title("Évolution temporelle des teneurs", fontsize=10, fontweight='bold')
+            axes_res[1,0].grid(True, linestyle=':', alpha=0.4)
+            plt.setp(axes_res[1,0].xaxis.get_majorticklabels(), rotation=30, fontsize=7)
+
+        # Au par laboratoire (comparaison)
+        au_labo = ech_res.groupby('laboratoire')['Au_ppb'].agg(['mean','std']).reset_index()
+        axes_res[1,1].bar(au_labo['laboratoire'], au_labo['mean'],
+                         yerr=au_labo['std'], capsize=5,
+                         color=['#FF5722','#2196F3','#4CAF50'],
+                         edgecolor='black', linewidth=0.5)
+        axes_res[1,1].set_ylabel("Au moyen ± std (ppb)")
+        axes_res[1,1].set_title("Comparaison inter-laboratoires", fontsize=10, fontweight='bold')
+        plt.setp(axes_res[1,1].xaxis.get_majorticklabels(), rotation=15, fontsize=8)
+
+        plt.suptitle(f"Analyse des résultats analytiques — {NOM_PROSPECT}", fontsize=12, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_res)
+
+    else:  # Statistiques
+        st.markdown("### 📈 Statistiques descriptives des analyses")
+        ech_stat = echantillons[echantillons['statut']=='Résultat reçu']
+        elements = ['Au_ppb','Cu_ppm','As_ppm','Ag_ppm','Fe_pct']
+        stats = ech_stat[elements].describe().round(3)
+        stats.loc['CV%'] = (ech_stat[elements].std() / ech_stat[elements].mean() * 100).round(1)
+        st.dataframe(stats.rename(columns={
+            'Au_ppb':'Au (ppb)','Cu_ppm':'Cu (ppm)','As_ppm':'As (ppm)',
+            'Ag_ppm':'Ag (ppm)','Fe_pct':'Fe (%)'
+        }), use_container_width=True)
+
+        # Boxplots
+        fig_box, ax_box = plt.subplots(figsize=(10,5))
+        data_box = [np.log10(ech_stat['Au_ppb']+0.01), np.log10(ech_stat['Cu_ppm']+0.01),
+                   np.log10(ech_stat['As_ppm']+0.01), np.log10(ech_stat['Ag_ppm']+0.01)]
+        bp = ax_box.boxplot(data_box, patch_artist=True,
+                          labels=['Au (ppb)','Cu (ppm)','As (ppm)','Ag (ppm)'])
+        colors_box = ['#FFD700','#B87333','#FF6B6B','#C0C0C0']
+        for patch, color in zip(bp['boxes'], colors_box):
+            patch.set_facecolor(color); patch.set_alpha(0.8)
+        ax_box.set_ylabel("log10(valeur)"); ax_box.set_title("Distribution log des éléments", fontsize=11, fontweight='bold')
+        ax_box.grid(True, linestyle=':', alpha=0.4)
+        plt.tight_layout(); st.pyplot(fig_box)
+
+        # Corrélation matricielle
+        st.markdown("### 🔗 Matrice de corrélation")
+        import seaborn as sns
+        fig_cm, ax_cm = plt.subplots(figsize=(7,5))
+        corr_m = ech_stat[elements].corr()
+        sns.heatmap(corr_m, annot=True, fmt='.2f', cmap='coolwarm', ax=ax_cm,
+                   linewidths=0.5, vmin=-1, vmax=1)
+        ax_cm.set_title("Corrélations inter-éléments", fontsize=11, fontweight='bold')
+        plt.tight_layout(); st.pyplot(fig_cm)
+
+        csv_st = ech_stat.to_csv(index=False)
+        st.download_button("📥 Télécharger données analytiques",
+                          data=csv_st, file_name="analyses_geochimiques.csv", mime='text/csv')
+
+st.markdown("---")
+st.caption(f"⛏️ {NOM_PROSPECT} | {NOM_PERMIS} | RC · Aircore · Diamond · SGI · Estimation · Extension · Mapping · Sampling")
