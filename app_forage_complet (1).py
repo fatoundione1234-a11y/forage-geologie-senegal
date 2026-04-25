@@ -198,10 +198,16 @@ tabs=st.tabs([
     "🌊 Géophysique",
     "🧪 Essai SGI",
     "💰 Estimation teneurs",
-    "🌐 Modèle 3D/Blocs",
-    "📋 Planification",
+    "🌐 Sections 2D & 3D",
+    "📋 Planification & Infill",
+    "🔭 Programme extension",
+    "🗺️ Mapping spatial",
+    "🔄 Simulation déviation",
+    "📍 Survey",
+    "🔬 Détecteur de roches",
     "📈 Monitoring",
     "📅 Weekly Report",
+    "💬 Commentaires",
     "📄 Rapport géologique",
     "📘 SOP Exploration",
     "🤖 Audit IA & Corrections",
@@ -829,48 +835,578 @@ with tabs[9]:
 
 # ══ TAB 11 — 3D ══════════════════════════════════════════════════════════════
 with tabs[10]:
-    st.subheader("🌐 Modèle 3D & Blocs")
-    vue3d=st.radio("Vue",['3D Forages','Modèle blocs 3D'],horizontal=True)
+    st.subheader("🌐 Sections 2D & 3D")
+    vue3d=st.radio("Vue",['Section 2D verticale','Section 2D plan','3D Forages interactif','Modèle blocs 3D'],horizontal=True)
     tc3d={'RC':'red','Aircore':'blue','Diamond':'purple'}
-    if vue3d=='3D Forages':
+    if vue3d=='Section 2D verticale':
+        st.markdown("### Section verticale 2D")
+        fig2dv,ax2dv=plt.subplots(figsize=(14,7))
+        fig2dv.patch.set_facecolor('#F8F8F0'); ax2dv.set_facecolor('#E8F4F8')
+        x_t2=np.linspace(0,600,300)
+        topo2=100+5*np.sin(x_t2/50)+3*np.cos(x_t2/30)
+        ax2dv.plot(x_t2,topo2,'k-',linewidth=2.5,label='Topographie')
+        ax2dv.fill_between(x_t2,topo2,0,alpha=0.1,color='brown')
+        ax2dv.axhline(y=0,color='blue',linestyle='--',linewidth=1,alpha=0.5,label='Référence 0m')
+        for d,lbl,lc in [(8,'Latérite','#8B4513'),(25,'Saprolite','#DAA520'),(50,'Saprock','#696969'),(80,'Bédrock','#FFD700')]:
+            ax2dv.axhline(y=topo2.mean()-d,color=lc,linestyle='-.',linewidth=1.2,alpha=0.7,label=lbl)
+        xpos2=np.linspace(60,540,min(6,len(df_forages)))
+        for i,(xp,(_,f)) in enumerate(zip(xpos2,df_forages.head(6).iterrows())):
+            tv=float(np.interp(xp,x_t2,topo2))
+            ints_2d=df_intervals[df_intervals['trou']==f['trou']].sort_values('de')
+            for _,iv in ints_2d.iterrows():
+                yt=tv-iv['de']*0.5; yb=tv-iv['a']*0.5
+                ax2dv.fill_betweenx([yb,yt],xp-6,xp+6,color=LITHO_COLORS.get(iv['lithologie'],'#888'),alpha=0.85)
+                if iv['mineralisé']:
+                    ax2dv.fill_betweenx([yb,yt],xp-6,xp+6,color='red',alpha=0.25,hatch='///')
+                if iv['Au_ppb']>=100:
+                    ax2dv.text(xp+8,(yt+yb)/2,f"{iv['Au_ppb']:.0f}ppb",fontsize=5.5,color='#FF6600',fontweight='bold')
+            ax2dv.text(xp,tv+6,f['trou'],ha='center',fontsize=7,fontweight='bold',color='#1A237E')
+            ax2dv.text(xp,tv+3,f['type'],ha='center',fontsize=6,color={'RC':'#FF5722','Aircore':'#2196F3','Diamond':'#9C27B0'}.get(f['type'],'black'),fontweight='bold')
+        ax2dv.annotate('',xy=(575,max(topo2)+6),xytext=(575,max(topo2)-6),arrowprops=dict(arrowstyle='->',color='black',lw=2.5))
+        ax2dv.text(575,max(topo2)+8,'N',ha='center',fontsize=12,fontweight='bold')
+        ax2dv.plot([20,70],[3,3],'k-',linewidth=3); ax2dv.text(45,0,'50 m',ha='center',fontsize=8,fontweight='bold')
+        lp2dv=[mpatches.Patch(color=c,label=l) for l,c in LITHO_COLORS.items()]
+        lp2dv.append(mpatches.Patch(color='red',alpha=0.4,hatch='///',label='Minéralisé'))
+        ax2dv.legend(handles=lp2dv,loc='lower right',fontsize=7,ncol=2,framealpha=0.9)
+        ax2dv.set_xlabel("Distance (m)"); ax2dv.set_ylabel("Élévation (m)")
+        ax2dv.set_title(f"Section verticale 2D — {NOM_PROSPECT}",fontsize=12,fontweight='bold')
+        ax2dv.grid(True,linestyle=':',alpha=0.3); plt.tight_layout(); st.pyplot(fig2dv)
+
+    elif vue3d=='Section 2D plan':
+        st.markdown("### Vue en plan 2D")
+        fig2dp,ax2dp=plt.subplots(figsize=(11,9))
+        for _,f in df_forages.iterrows():
+            ir=np.radians(abs(f['inclinaison'])); ar=np.radians(f['azimut'])
+            d=np.linspace(0,f['profondeur'],20)
+            xs=f['easting']+d*np.sin(ar)*np.cos(ir); ys=f['northing']+d*np.cos(ar)*np.cos(ir)
+            ax2dp.plot(xs,ys,color=tc3d.get(f['type'],'gray'),linewidth=2,alpha=0.7)
+            ax2dp.scatter(f['easting'],f['northing'],color=tc3d.get(f['type'],'gray'),s=80,zorder=3,edgecolors='black')
+            ax2dp.text(f['easting'],f['northing']+8,f['trou'],fontsize=6.5,ha='center',fontweight='bold')
+        xmx=df_forages['easting'].max(); ymx=df_forages['northing'].max()
+        xmn=df_forages['easting'].min(); ymn=df_forages['northing'].min()
+        ax2dp.annotate('',xy=(xmx+60,ymx+25),xytext=(xmx+60,ymx-20),arrowprops=dict(arrowstyle='->',color='black',lw=2.5))
+        ax2dp.text(xmx+60,ymx+35,'N',ha='center',fontsize=14,fontweight='bold')
+        ax2dp.plot([xmn,xmn+200],[ymn-35,ymn-35],'k-',linewidth=3)
+        ax2dp.text(xmn+100,ymn-50,'200 m',ha='center',fontsize=9,fontweight='bold')
+        lp2dp=[mpatches.Patch(color=c,label=t) for t,c in tc3d.items()]
+        ax2dp.legend(handles=lp2dp,title='Type forage',fontsize=9,loc='lower right')
+        ax2dp.set_xlabel("Easting (m)"); ax2dp.set_ylabel("Northing (m)")
+        ax2dp.set_title(f"Vue en plan 2D — {NOM_PROSPECT}",fontsize=12,fontweight='bold')
+        ax2dp.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig2dp)
+
+    elif vue3d=='3D Forages interactif':
         fig3d=go.Figure()
         for _,f in df_forages.iterrows():
             ir=np.radians(abs(f['inclinaison'])); ar=np.radians(f['azimut'])
             d=np.linspace(0,f['profondeur'],30)
-            fig3d.add_trace(go.Scatter3d(x=f['easting']+d*np.sin(ar)*np.cos(ir),y=f['northing']+d*np.cos(ar)*np.cos(ir),z=f['elevation']-d*np.sin(ir),
-                mode='lines+markers',line=dict(color=tc3d.get(f['type'],'gray'),width=4),marker=dict(size=2),name=f"{f['trou']} ({f['type']})"))
-        fig3d.update_layout(scene=dict(xaxis_title='Easting',yaxis_title='Northing',zaxis_title='Élévation'),title=f"Modèle 3D — {NOM_PROSPECT}",height=600)
+            fig3d.add_trace(go.Scatter3d(
+                x=f['easting']+d*np.sin(ar)*np.cos(ir),
+                y=f['northing']+d*np.cos(ar)*np.cos(ir),
+                z=f['elevation']-d*np.sin(ir),
+                mode='lines+markers',
+                line=dict(color=tc3d.get(f['type'],'gray'),width=4),
+                marker=dict(size=2),
+                name=f"{f['trou']} ({f['type']})",
+                hovertemplate=f"<b>{f['trou']}</b><br>Type:{f['type']}<br>Prof:{f['profondeur']}m<br>Au:{f['Au_max_ppb']}ppb"))
+        fig3d.update_layout(scene=dict(xaxis_title='Easting',yaxis_title='Northing',zaxis_title='Élévation',bgcolor='#1A1A2E'),
+            title=f"Modèle 3D forages — {NOM_PROSPECT}",height=650,paper_bgcolor='#1A1A2E',font=dict(color='white'))
         st.plotly_chart(fig3d,use_container_width=True)
         st.info("🖱️ Clic gauche=rotation | Scroll=zoom | Clic droit=déplacement")
+
     else:
-        nx,ny,nz=8,8,6
-        xbl=np.linspace(BASE_E-300,BASE_E+300,nx); ybl=np.linspace(BASE_N-300,BASE_N+300,ny); zbl=np.linspace(0,100,nz)
-        blocs=[{'x':xi,'y':yi,'z':zi,'Au':round(max(0,np.random.lognormal(2,1)-min([np.sqrt((xi-f['easting'])**2+(yi-f['northing'])**2) for _,f in df_forages.iterrows()])/100),1)} for xi in xbl for yi in ybl for zi in zbl]
+        st.markdown("### Modèle de blocs 3D — Teneur Au")
+        nx,ny,nz=10,10,6
+        xbl=np.linspace(BASE_E-400,BASE_E+400,nx); ybl=np.linspace(BASE_N-400,BASE_N+400,ny); zbl=np.linspace(0,120,nz)
+        blocs=[]
+        for xi in xbl:
+            for yi in ybl:
+                for zi in zbl:
+                    dmin=min([np.sqrt((xi-f['easting'])**2+(yi-f['northing'])**2) for _,f in df_forages.iterrows()])
+                    au_b=round(max(0,np.random.lognormal(3,1.2)-dmin/80),1)
+                    blocs.append({'x':xi,'y':yi,'z':zi,'Au':au_b})
         df_bl=pd.DataFrame(blocs)
         fig_bl=go.Figure(data=go.Scatter3d(x=df_bl['x'],y=df_bl['y'],z=df_bl['z'],mode='markers',
-            marker=dict(size=6,color=df_bl['Au'],colorscale='Viridis',colorbar=dict(title='Au (ppb)'),opacity=0.7)))
-        fig_bl.update_layout(title=f"Modèle blocs — {NOM_PROSPECT}",height=600)
+            marker=dict(size=7,color=df_bl['Au'],colorscale='Viridis',
+                       colorbar=dict(title='Au (ppb)'),opacity=0.75,
+                       cmin=0,cmax=df_bl['Au'].quantile(0.95)),
+            text=df_bl['Au'].apply(lambda v:f"Au: {v:.1f} ppb"),
+            hovertemplate="<b>%{text}</b><br>E:%{x:.0f} N:%{y:.0f} Z:%{z:.0f}m"))
+        fig_bl.update_layout(scene=dict(xaxis_title='Easting',yaxis_title='Northing',zaxis_title='Profondeur'),
+            title=f"Modèle de blocs 3D — {NOM_PROSPECT}",height=650)
         st.plotly_chart(fig_bl,use_container_width=True)
-        c1,c2=st.columns(2); c1.metric("Blocs modélisés",len(df_bl)); c2.metric("Au moyen",f"{df_bl['Au'].mean():.1f} ppb")
+        c1,c2,c3=st.columns(3)
+        c1.metric("Blocs modélisés",len(df_bl))
+        c2.metric("Au moyen",f"{df_bl['Au'].mean():.1f} ppb")
+        c3.metric("Au max bloc",f"{df_bl['Au'].max():.1f} ppb")
 
 # ══ TAB 12 — PLANIFICATION ═══════════════════════════════════════════════════
 with tabs[11]:
-    st.subheader("📋 Planification des Forages")
+    st.subheader("📋 Planification & Infill/Extension")
     col1,col2=st.columns(2)
     with col1:
         sc2=df_forages['statut'].value_counts()
         fig_sp2,ax_sp2=plt.subplots(figsize=(5,4))
         ax_sp2.pie(sc2.values,labels=sc2.index,colors=['#4CAF50','#FF9800','#2196F3'],autopct='%1.0f%%',startangle=90)
-        ax_sp2.set_title("Statut"); st.pyplot(fig_sp2)
+        ax_sp2.set_title("Statut des forages"); st.pyplot(fig_sp2)
     with col2:
-        ea=st.slider("Espacement actuel (m)",50,400,200); ei=st.slider("Espacement infill (m)",25,200,100)
+        ea=st.slider("Espacement actuel (m)",50,400,200,key='ea1')
+        ei=st.slider("Espacement infill (m)",25,200,100,key='ei1')
         nb_i=int((ea/ei-1)*len(df_forages[df_forages['statut']=='Complété']))
-        cm2=st.number_input("Coût/m (USD)",50,500,150); ct2=nb_i*df_forages['profondeur'].mean()*cm2
-        c1,c2=st.columns(2); c1.metric("Infill nécessaires",nb_i); c2.metric("Coût estimé",f"${ct2:,.0f}")
+        nb_ext_p=st.slider("Trous extension prévus",0,20,5,key='nep')
+        cm2=st.number_input("Coût/mètre (USD)",50,500,150,key='cm2')
+        ct2=(nb_i+nb_ext_p)*df_forages['profondeur'].mean()*cm2
+        c1,c2,c3=st.columns(3)
+        c1.metric("Infill nécessaires",nb_i)
+        c2.metric("Extension",nb_ext_p)
+        c3.metric("Budget estimé",f"${ct2:,.0f}")
+    st.markdown("### 📊 Tableau de planification")
     st.dataframe(df_forages[['trou','type','profondeur','azimut','inclinaison','statut','equipe','Au_max_ppb']],use_container_width=True)
+    # Carte infill
+    fig_inf,ax_inf=plt.subplots(figsize=(10,8))
+    fig_inf.patch.set_facecolor('#F5F5F0'); ax_inf.set_facecolor('#E8F4F8')
+    for _,f in df_forages.iterrows():
+        c={'Complété':'#4CAF50','En cours':'#FF9800','Planifié':'#2196F3'}.get(f['statut'],'gray')
+        ax_inf.scatter(f['easting'],f['northing'],c=c,s=120,edgecolors='black',linewidths=0.8,zorder=3)
+        ax_inf.text(f['easting'],f['northing']+8,f['trou'],fontsize=6,ha='center')
+    np.random.seed(88)
+    for _ in range(nb_i):
+        xi=np.random.uniform(df_forages['easting'].min(),df_forages['easting'].max())
+        yi=np.random.uniform(df_forages['northing'].min(),df_forages['northing'].max())
+        ax_inf.scatter(xi,yi,c='purple',s=150,marker='+',linewidths=2,zorder=4,label='Infill' if _==0 else '')
+    for _ in range(nb_ext_p):
+        xi=np.random.uniform(df_forages['easting'].min()-200,df_forages['easting'].max()+200)
+        yi=np.random.uniform(df_forages['northing'].min()-200,df_forages['northing'].max()+200)
+        ax_inf.scatter(xi,yi,c='red',s=150,marker='*',linewidths=1,zorder=4,label='Extension' if _==0 else '')
+    xmx=df_forages['easting'].max(); ymx=df_forages['northing'].max()
+    xmn=df_forages['easting'].min(); ymn=df_forages['northing'].min()
+    ax_inf.annotate('',xy=(xmx+60,ymx+25),xytext=(xmx+60,ymx-20),arrowprops=dict(arrowstyle='->',color='black',lw=2.5))
+    ax_inf.text(xmx+60,ymx+35,'N',ha='center',fontsize=14,fontweight='bold')
+    ax_inf.plot([xmn,xmn+200],[ymn-35,ymn-35],'k-',linewidth=3)
+    ax_inf.text(xmn+100,ymn-50,'200 m',ha='center',fontsize=9,fontweight='bold')
+    lp_inf=[mpatches.Patch(color='#4CAF50',label='Complété'),mpatches.Patch(color='#FF9800',label='En cours'),
+            mpatches.Patch(color='#2196F3',label='Planifié'),
+            plt.Line2D([0],[0],marker='+',color='w',markerfacecolor='purple',markersize=12,markeredgecolor='purple',label='Infill'),
+            plt.Line2D([0],[0],marker='*',color='w',markerfacecolor='red',markersize=12,label='Extension')]
+    ax_inf.legend(handles=lp_inf,loc='lower right',fontsize=8,framealpha=0.95)
+    ax_inf.set_xlabel("Easting UTM (m)"); ax_inf.set_ylabel("Northing UTM (m)")
+    ax_inf.set_title(f"Carte planification Infill & Extension — {NOM_PROSPECT}",fontsize=12,fontweight='bold')
+    ax_inf.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_inf)
+
+# ══ TAB 12 — PROGRAMME EXTENSION ═════════════════════════════════════════════
+with tabs[12]:
+    st.subheader(f"🔭 Programme d'Extension — {NOM_PROSPECT}")
+    np.random.seed(33)
+    ext_zones=pd.DataFrame([{
+        'zone':f'EXT{i+1:02d}',
+        'priorite':np.random.choice(['Haute','Moyenne','Faible'],p=[0.3,0.4,0.3]),
+        'easting':round(BASE_E+np.random.uniform(-600,600),1),
+        'northing':round(BASE_N+np.random.uniform(-600,600),1),
+        'profondeur_cible':np.random.choice([80,100,120,150,200]),
+        'azimut':round(np.random.uniform(0,360),1),
+        'inclinaison':round(np.random.uniform(-85,-60),1),
+        'type_forage':np.random.choice(['RC','Diamond'],p=[0.5,0.5]),
+        'Au_prevu_ppb':round(np.random.lognormal(4,1.2),1),
+        'cout_usd':round(np.random.uniform(10000,50000),0),
+        'justification':np.random.choice(['Extension anomalie Au','Prolongement zone minéralisée','Test structure NE','Confirmation intersection','Approfondissement']),
+        'statut':np.random.choice(['Planifié','Approuvé','En attente'],p=[0.5,0.3,0.2]),
+    } for i in range(20)])
+    prio_colors={'Haute':'#FF0000','Moyenne':'#FF9800','Faible':'#2196F3'}
+    prio_markers={'Haute':'*','Moyenne':'^','Faible':'s'}
+
+    c1,c2,c3,c4,c5=st.columns(5)
+    c1.metric("Zones extension",len(ext_zones))
+    c2.metric("Priorité Haute",int((ext_zones['priorite']=='Haute').sum()))
+    c3.metric("Approuvées",int((ext_zones['statut']=='Approuvé').sum()))
+    c4.metric("Mètres prévus",f"{ext_zones['profondeur_cible'].sum():.0f}m")
+    c5.metric("Budget total",f"${ext_zones['cout_usd'].sum():,.0f}")
+
+    col1,col2=st.columns([3,1])
+    with col1:
+        fig_ext,ax_ext=plt.subplots(figsize=(12,10))
+        fig_ext.patch.set_facecolor('#F5F5F0'); ax_ext.set_facecolor('#E8F4F8')
+        for _,f in df_forages.iterrows():
+            ax_ext.scatter(f['easting'],f['northing'],c='black',s=60,marker='o',zorder=3)
+            ax_ext.text(f['easting'],f['northing']+8,f['trou'],fontsize=5.5,ha='center',color='#1A237E')
+        for prio,color in prio_colors.items():
+            sub=ext_zones[ext_zones['priorite']==prio]
+            sz=300 if prio=='Haute' else 150 if prio=='Moyenne' else 80
+            ax_ext.scatter(sub['easting'],sub['northing'],c=color,s=sz,marker=prio_markers[prio],
+                          edgecolors='black',linewidths=1,zorder=4,alpha=0.85,label=f'{prio} ({len(sub)})')
+            for _,z in sub.iterrows():
+                ax_ext.text(z['easting'],z['northing']+12,z['zone'],fontsize=6,ha='center',color=color,fontweight='bold')
+                if prio=='Haute':
+                    ax_ext.add_patch(plt.Circle((z['easting'],z['northing']),80,fill=False,color='red',linewidth=1.5,linestyle='--',alpha=0.5))
+        xmx=max(df_forages['easting'].max(),ext_zones['easting'].max())
+        ymx=max(df_forages['northing'].max(),ext_zones['northing'].max())
+        xmn=min(df_forages['easting'].min(),ext_zones['easting'].min())
+        ymn=min(df_forages['northing'].min(),ext_zones['northing'].min())
+        ax_ext.annotate('',xy=(xmx+80,ymx+25),xytext=(xmx+80,ymx-25),arrowprops=dict(arrowstyle='->',color='black',lw=2.5))
+        ax_ext.text(xmx+80,ymx+40,'N',ha='center',fontsize=16,fontweight='bold')
+        ax_ext.plot([xmn,xmn+300],[ymn-50,ymn-50],'k-',linewidth=3)
+        ax_ext.text(xmn+150,ymn-70,'300 m',ha='center',fontsize=9,fontweight='bold')
+        ax_ext.legend(loc='lower right',fontsize=9,title='Priorité extension',framealpha=0.95)
+        ax_ext.set_xlabel("Easting UTM (m)"); ax_ext.set_ylabel("Northing UTM (m)")
+        ax_ext.set_title(f"Programme d'extension — {NOM_PROSPECT}\n{NOM_PERMIS}",fontsize=12,fontweight='bold')
+        ax_ext.grid(True,linestyle='--',alpha=0.4); plt.tight_layout(); st.pyplot(fig_ext)
+    with col2:
+        st.markdown("### 📊 Budget par priorité")
+        for prio,color in prio_colors.items():
+            sub=ext_zones[ext_zones['priorite']==prio]
+            st.markdown(f"**{prio}** : {len(sub)} zones")
+            st.markdown(f"Mètres : {sub['profondeur_cible'].sum():.0f}m")
+            st.markdown(f"Coût : ${sub['cout_usd'].sum():,.0f}")
+            st.markdown("---")
+
+    fp=st.multiselect("Filtrer priorité",['Haute','Moyenne','Faible'],default=['Haute','Moyenne','Faible'],key='fpe')
+    st.dataframe(ext_zones[ext_zones['priorite'].isin(fp)],use_container_width=True)
+
+    # Analyse risque/bénéfice
+    fig_rb,ax_rb=plt.subplots(figsize=(8,5))
+    sc_rb=ax_rb.scatter(ext_zones['cout_usd']/1000,ext_zones['Au_prevu_ppb'],
+                       c=[{'Haute':3,'Moyenne':2,'Faible':1}[p] for p in ext_zones['priorite']],
+                       cmap='RdYlGn',s=150,edgecolors='black',linewidths=0.8,alpha=0.85,zorder=3)
+    for _,z in ext_zones.iterrows():
+        ax_rb.text(z['cout_usd']/1000+0.3,z['Au_prevu_ppb'],z['zone'],fontsize=6.5,color='#333')
+    ax_rb.set_xlabel("Coût estimé (k$)"); ax_rb.set_ylabel("Au prévu (ppb)")
+    ax_rb.set_title("Analyse Risque/Bénéfice — Zones d'extension",fontsize=11,fontweight='bold')
+    plt.colorbar(sc_rb,ax=ax_rb,label='Priorité (1=Faible 3=Haute)')
+    ax_rb.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_rb)
+    st.download_button("📥 Programme extension",data=ext_zones.to_csv(index=False),file_name="programme_extension.csv",mime='text/csv')
+
+# ══ TAB 13 — MAPPING SPATIAL ═════════════════════════════════════════════════
+with tabs[13]:
+    st.subheader(f"🗺️ Mapping & Analyse Spatiale — {NOM_PROSPECT}")
+    analyse_type=st.radio("Analyse",['Carte densité minéralisations','Variogramme expérimental','Clusters spatiaux','Corrélations spatiales'],horizontal=True,key='at')
+    au_par_t=df_intervals.groupby('trou')['Au_ppb'].max().reset_index(); au_par_t.columns=['trou','Au_max']
+    df_sp=df_forages.merge(au_par_t,on='trou')
+
+    if analyse_type=='Carte densité minéralisations':
+        fig_dens,axes_dens=plt.subplots(1,2,figsize=(14,7))
+        if len(df_sp)>3:
+            xi=np.linspace(df_sp['easting'].min()-100,df_sp['easting'].max()+100,200)
+            yi=np.linspace(df_sp['northing'].min()-100,df_sp['northing'].max()+100,200)
+            Xi,Yi=np.meshgrid(xi,yi)
+            Zi=griddata((df_sp['easting'],df_sp['northing']),df_sp['Au_max'],(Xi,Yi),method='cubic')
+            im=axes_dens[0].contourf(Xi,Yi,Zi,levels=25,cmap='YlOrRd',alpha=0.85)
+            plt.colorbar(im,ax=axes_dens[0],label='Au max (ppb)')
+        for _,f in df_sp.iterrows():
+            axes_dens[0].scatter(f['easting'],f['northing'],c='white',s=80,edgecolors='black',linewidths=1,zorder=4)
+            axes_dens[0].text(f['easting'],f['northing']+8,f['trou'],fontsize=6,ha='center',fontweight='bold')
+        xmx=df_sp['easting'].max(); ymx=df_sp['northing'].max(); xmn=df_sp['easting'].min(); ymn=df_sp['northing'].min()
+        axes_dens[0].annotate('',xy=(xmx+60,ymx+20),xytext=(xmx+60,ymx-20),arrowprops=dict(arrowstyle='->',color='black',lw=2))
+        axes_dens[0].text(xmx+60,ymx+30,'N',ha='center',fontsize=12,fontweight='bold')
+        axes_dens[0].plot([xmn,xmn+200],[ymn-35,ymn-35],'k-',linewidth=3)
+        axes_dens[0].text(xmn+100,ymn-50,'200 m',ha='center',fontsize=9,fontweight='bold')
+        axes_dens[0].set_title("Carte de densité Au",fontsize=11,fontweight='bold'); axes_dens[0].grid(True,linestyle=':',alpha=0.3)
+        axes_dens[1].hist(np.log10(df_sp['Au_max']+1),bins=15,color='#FFD700',edgecolor='black',linewidth=0.5)
+        axes_dens[1].set_xlabel("log10(Au max+1)"); axes_dens[1].set_title("Distribution log-normale",fontsize=11,fontweight='bold')
+        axes_dens[1].axvline(np.log10(101),color='red',linestyle='--',linewidth=2,label='100 ppb'); axes_dens[1].legend(fontsize=9); axes_dens[1].grid(True,linestyle=':',alpha=0.4)
+        plt.suptitle(f"Analyse spatiale — {NOM_PROSPECT}",fontsize=12,fontweight='bold'); plt.tight_layout(); st.pyplot(fig_dens)
+
+    elif analyse_type=='Variogramme expérimental':
+        coords=df_sp[['easting','northing']].values; values=np.log1p(df_sp['Au_max'].values)
+        distances=[]; gammas=[]
+        for i in range(len(coords)):
+            for j in range(i+1,len(coords)):
+                distances.append(np.sqrt(sum((coords[i]-coords[j])**2)))
+                gammas.append(0.5*(values[i]-values[j])**2)
+        distances=np.array(distances); gammas=np.array(gammas)
+        bins=np.linspace(0,distances.max(),12); gb=[]; db=[]
+        for k in range(len(bins)-1):
+            mask=(distances>=bins[k])&(distances<bins[k+1])
+            if mask.sum()>0: gb.append(gammas[mask].mean()); db.append((bins[k]+bins[k+1])/2)
+        gb=np.array(gb); db=np.array(db)
+        fig_var,ax_var=plt.subplots(figsize=(8,5))
+        ax_var.scatter(db,gb,c='#2196F3',s=100,edgecolors='black',linewidths=1,zorder=3)
+        ax_var.plot(db,gb,'b--',linewidth=1.5,alpha=0.6)
+        nugget=gb[0] if len(gb)>0 else 0.1; sill=gb.max() if len(gb)>0 else 1; rv=db[len(db)//2] if len(db)>0 else 200
+        h=np.linspace(0,db.max() if len(db)>0 else 500,100)
+        model=np.where(h>rv,sill,nugget+(sill-nugget)*(1.5*(h/rv)-0.5*(h/rv)**3))
+        ax_var.plot(h,model,'r-',linewidth=2.5,label=f'Modèle sphérique\nNugget:{nugget:.2f} Sill:{sill:.2f} Range:{rv:.0f}m')
+        ax_var.set_xlabel("Distance (m)"); ax_var.set_ylabel("γ(h)"); ax_var.set_title("Variogramme expérimental — Au",fontsize=11,fontweight='bold')
+        ax_var.legend(fontsize=8); ax_var.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_var)
+        st.info(f"**Portée :** {rv:.0f}m | Espacement recommandé : {rv*0.6:.0f}m max")
+
+    elif analyse_type=='Clusters spatiaux':
+        nc=st.slider("Nombre de clusters",2,6,3,key='nc')
+        coords_c=df_sp[['easting','northing']].values
+        km=KMeans(n_clusters=nc,random_state=42,n_init=10)
+        df_sp2=df_sp.copy(); df_sp2['cluster']=km.fit_predict(coords_c)
+        centers=km.cluster_centers_; cl_colors=['#FF5722','#2196F3','#4CAF50','#FF9800','#9C27B0','#00BCD4']
+        fig_cl,axes_cl=plt.subplots(1,2,figsize=(14,6))
+        for cl in range(nc):
+            sub=df_sp2[df_sp2['cluster']==cl]
+            axes_cl[0].scatter(sub['easting'],sub['northing'],c=cl_colors[cl],s=150,edgecolors='black',linewidths=1,label=f'Cluster {cl+1}',zorder=3,alpha=0.85)
+        axes_cl[0].scatter(centers[:,0],centers[:,1],c='black',s=300,marker='X',zorder=5,label='Centroïdes')
+        axes_cl[0].legend(fontsize=8); axes_cl[0].set_title("Clusters spatiaux",fontsize=11,fontweight='bold'); axes_cl[0].grid(True,linestyle=':',alpha=0.4)
+        ca=df_sp2.groupby('cluster')['Au_max'].agg(['mean','max']).reset_index()
+        axes_cl[1].bar([f'C{c+1}' for c in ca['cluster']],ca['mean'],color=[cl_colors[c] for c in ca['cluster']],edgecolor='black',linewidth=0.5)
+        axes_cl[1].set_ylabel("Au max moyen (ppb)"); axes_cl[1].set_title("Au par cluster",fontsize=11,fontweight='bold'); axes_cl[1].grid(True,linestyle=':',alpha=0.4)
+        plt.suptitle(f"Analyse de clusters — {NOM_PROSPECT}",fontsize=12,fontweight='bold'); plt.tight_layout(); st.pyplot(fig_cl)
+        bc=ca.loc[ca['mean'].idxmax(),'cluster']
+        st.success(f"**Cluster {bc+1}** le plus prometteur — Au moyen = {ca.loc[bc,'mean']:.1f} ppb")
+
+    else:
+        au_m=df_intervals.groupby('trou')[['Au_ppb','Cu_ppm','As_ppm','Ag_ppm']].mean().reset_index()
+        df_corr=df_forages.merge(au_m,on='trou')
+        fig_corr,axes_corr=plt.subplots(2,2,figsize=(12,10))
+        for ax_c,(xc,yc) in zip(axes_corr.flatten(),[('Au_ppb','As_ppm'),('Au_ppb','Cu_ppm'),('Au_ppb','Ag_ppm'),('As_ppm','Cu_ppm')]):
+            ax_c.scatter(df_corr[xc],df_corr[yc],c='#FF5722',s=80,edgecolors='black',linewidths=0.5,alpha=0.85)
+            if len(df_corr)>2:
+                z=np.polyfit(df_corr[xc].fillna(0),df_corr[yc].fillna(0),1); p=np.poly1d(z)
+                xl=np.linspace(df_corr[xc].min(),df_corr[xc].max(),50)
+                ax_c.plot(xl,p(xl),'r--',linewidth=2)
+                r=np.corrcoef(df_corr[xc].fillna(0),df_corr[yc].fillna(0))[0,1]
+                ax_c.text(0.05,0.95,f'r = {r:.2f}',transform=ax_c.transAxes,fontsize=10,fontweight='bold',color='red',verticalalignment='top',bbox=dict(boxstyle='round',facecolor='white',alpha=0.8))
+            ax_c.set_xlabel(xc); ax_c.set_ylabel(yc); ax_c.set_title(f"{xc} vs {yc}",fontsize=10,fontweight='bold'); ax_c.grid(True,linestyle=':',alpha=0.4)
+        plt.suptitle(f"Corrélations spatiales — {NOM_PROSPECT}",fontsize=12,fontweight='bold'); plt.tight_layout(); st.pyplot(fig_corr)
+
+# ══ TAB 14 — SIMULATION DÉVIATION ════════════════════════════════════════════
+with tabs[14]:
+    st.subheader("🔄 Simulation de Déviation — Azimut & Inclinaison")
+    col1,col2=st.columns([1,2])
+    with col1:
+        trou_dev=st.selectbox("Trou à simuler",df_forages['trou'].tolist(),key='tdev')
+        f_dev=df_forages[df_forages['trou']==trou_dev].iloc[0]
+        st.markdown(f"**Type :** {f_dev['type']} | **Prof :** {f_dev['profondeur']}m")
+        az_i=st.slider("Azimut initial (°)",0,360,int(f_dev['azimut']),key='azi')
+        inc_i=st.slider("Inclinaison initiale (°)",-90,-45,int(f_dev['inclinaison']),key='inci')
+        dev_az=st.slider("Déviation azimut/10m (°)",0.0,5.0,1.5,0.1,key='daz')
+        dev_inc=st.slider("Déviation inclinaison/10m (°)",0.0,3.0,0.8,0.1,key='dinc')
+        prof_sim=st.slider("Profondeur simulée (m)",10,200,int(f_dev['profondeur']),key='psim')
+        st.markdown("---")
+        st.markdown("**⚠️ Critères d'acceptabilité :**")
+        st.markdown("✅ Déviation < 10m : Acceptable")
+        st.markdown("🟡 Déviation 10–25m : Surveiller")
+        st.markdown("🔴 Déviation > 25m : Correction requise")
+    with col2:
+        depths=np.arange(0,prof_sim+1,1)
+        az_v=az_i+dev_az*depths/10*np.sin(depths/20)
+        inc_v=inc_i+dev_inc*depths/10*np.cos(depths/15)
+        xp=np.cumsum(np.sin(np.radians(az_i))*np.cos(np.radians(inc_i))*np.ones(len(depths)))
+        yp=np.cumsum(np.cos(np.radians(az_i))*np.cos(np.radians(inc_i))*np.ones(len(depths)))
+        zp=f_dev['elevation']-np.cumsum(np.sin(np.radians(abs(inc_i)))*np.ones(len(depths)))
+        xd=np.cumsum(np.sin(np.radians(az_v))*np.cos(np.radians(inc_v)))
+        yd=np.cumsum(np.cos(np.radians(az_v))*np.cos(np.radians(inc_v)))
+        zd=f_dev['elevation']-np.cumsum(np.sin(np.radians(abs(inc_v))))
+        fig_dev=go.Figure()
+        fig_dev.add_trace(go.Scatter3d(x=xp+f_dev['easting'],y=yp+f_dev['northing'],z=zp,
+            mode='lines',line=dict(color='blue',width=4,dash='dash'),name='Trajectoire planifiée'))
+        fig_dev.add_trace(go.Scatter3d(x=xd+f_dev['easting'],y=yd+f_dev['northing'],z=zd,
+            mode='lines',line=dict(color='red',width=4),name='Trajectoire déviée'))
+        # Points de mesure tous les 30m
+        pts_30=[i for i in range(0,prof_sim,30)]
+        fig_dev.add_trace(go.Scatter3d(
+            x=[xp[p]+f_dev['easting'] for p in pts_30],
+            y=[yp[p]+f_dev['northing'] for p in pts_30],
+            z=[zp[p] for p in pts_30],
+            mode='markers',marker=dict(size=6,color='blue',symbol='circle'),name='Mesures planifiées'))
+        fig_dev.add_trace(go.Scatter3d(
+            x=[xd[p]+f_dev['easting'] for p in pts_30],
+            y=[yd[p]+f_dev['northing'] for p in pts_30],
+            z=[zd[p] for p in pts_30],
+            mode='markers',marker=dict(size=6,color='red',symbol='diamond'),name='Mesures réelles'))
+        fig_dev.update_layout(scene=dict(xaxis_title='Easting',yaxis_title='Northing',zaxis_title='Élévation'),
+            title=f"Simulation déviation — {trou_dev}",height=500)
+        st.plotly_chart(fig_dev,use_container_width=True)
+        dev_tot=np.sqrt((xd[-1]-xp[-1])**2+(yd[-1]-yp[-1])**2)
+        if dev_tot>25: st.error(f"🔴 Déviation : **{dev_tot:.1f} m** — Correction immédiate requise ! Arrêter le forage.")
+        elif dev_tot>10: st.warning(f"🟡 Déviation : **{dev_tot:.1f} m** — Surveillance renforcée recommandée.")
+        else: st.success(f"✅ Déviation : **{dev_tot:.1f} m** — Dans les tolérances acceptables.")
+
+        # Tableau de déviation tous les 30m
+        st.markdown("### 📋 Tableau de déviation")
+        tab_dev=pd.DataFrame({'Profondeur(m)':pts_30,
+            'Az. planifié(°)':[round(az_i,1)]*len(pts_30),
+            'Az. réel(°)':[round(az_v[p],1) for p in pts_30],
+            'Inc. planifiée(°)':[round(inc_i,1)]*len(pts_30),
+            'Inc. réelle(°)':[round(inc_v[p],1) for p in pts_30],
+            'Déviation(m)':[round(np.sqrt((xd[p]-xp[p])**2+(yd[p]-yp[p])**2),1) for p in pts_30]})
+        st.dataframe(tab_dev.style.map(
+            lambda v:'background-color:#ffcccc' if isinstance(v,float) and v>10 else 'background-color:#ffffcc' if isinstance(v,float) and v>5 else '',
+            subset=['Déviation(m)']),use_container_width=True)
+
+# ══ TAB 15 — SURVEY ══════════════════════════════════════════════════════════
+with tabs[15]:
+    st.subheader(f"📍 Survey — Levé des collets de forage")
+    st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS}")
+
+    survey_vue=st.radio("Module",['Collars survey','Données de déviation','Carte survey','Export survey'],horizontal=True,key='sv')
+
+    # Données survey
+    survey_df=df_forages[['trou','type','easting','northing','elevation','azimut','inclinaison','profondeur','statut']].copy()
+    survey_df.columns=['Trou','Type','Easting(m)','Northing(m)','Élévation(m)','Azimut(°)','Inclinaison(°)','Profondeur(m)','Statut']
+
+    # Données déviation
+    dev_surveys=[]
+    for _,f in df_forages.iterrows():
+        for d in range(0,int(f['profondeur']),30):
+            dev_surveys.append({'trou':f['trou'],'profondeur':d,
+                'azimut':round(f['azimut']+np.random.normal(0,2),1),
+                'inclinaison':round(f['inclinaison']+np.random.normal(0,1),1),
+                'instrument':np.random.choice(['Reflex EZ-Trac','Acid tube','Gyroscopique'])})
+    df_dev_survey=pd.DataFrame(dev_surveys)
+
+    if survey_vue=='Collars survey':
+        st.markdown("### 📋 Tableau des collars")
+        st.dataframe(survey_df,use_container_width=True)
+        # Stats
+        c1,c2,c3,c4=st.columns(4)
+        c1.metric("Total forages",len(survey_df))
+        c2.metric("Mètres totaux",f"{df_forages['profondeur'].sum():.0f}m")
+        c3.metric("Az. moyen",f"{df_forages['azimut'].mean():.1f}°")
+        c4.metric("Inc. moyenne",f"{df_forages['inclinaison'].mean():.1f}°")
+
+    elif survey_vue=='Données de déviation':
+        trou_sv=st.selectbox("Trou",df_forages['trou'].tolist(),key='tsv')
+        df_sv_t=df_dev_survey[df_dev_survey['trou']==trou_sv]
+        st.dataframe(df_sv_t.rename(columns={'trou':'Trou','profondeur':'Profondeur(m)',
+            'azimut':'Azimut(°)','inclinaison':'Inclinaison(°)','instrument':'Instrument'}),use_container_width=True)
+        fig_sv,axes_sv=plt.subplots(1,2,figsize=(10,5),sharey=True)
+        axes_sv[0].plot(df_sv_t['azimut'],df_sv_t['profondeur'],'b-o',markersize=6)
+        axes_sv[0].set_xlabel("Azimut (°)"); axes_sv[0].set_ylabel("Profondeur (m)")
+        axes_sv[0].set_title("Azimut en profondeur",fontsize=10,fontweight='bold')
+        axes_sv[0].invert_yaxis(); axes_sv[0].grid(True,linestyle=':',alpha=0.4)
+        axes_sv[1].plot(df_sv_t['inclinaison'],df_sv_t['profondeur'],'r-s',markersize=6)
+        axes_sv[1].set_xlabel("Inclinaison (°)"); axes_sv[1].set_title("Inclinaison en profondeur",fontsize=10,fontweight='bold')
+        axes_sv[1].grid(True,linestyle=':',alpha=0.4)
+        plt.suptitle(f"Survey déviation — {trou_sv}",fontsize=11,fontweight='bold'); plt.tight_layout(); st.pyplot(fig_sv)
+
+    elif survey_vue=='Carte survey':
+        fig_csv,ax_csv=plt.subplots(figsize=(11,9))
+        fig_csv.patch.set_facecolor('#F5F5F0'); ax_csv.set_facecolor('#E8F4F8')
+        for _,f in df_forages.iterrows():
+            c_sv={'RC':'#FF5722','Aircore':'#2196F3','Diamond':'#9C27B0'}.get(f['type'],'gray')
+            ax_csv.scatter(f['easting'],f['northing'],c=c_sv,s=120,edgecolors='black',linewidths=1,zorder=3)
+            ax_csv.text(f['easting'],f['northing']+8,f['trou'],fontsize=6.5,ha='center',fontweight='bold')
+            # Flèche azimut
+            az_r=np.radians(f['azimut']); ln_az=30
+            ax_csv.annotate('',xy=(f['easting']+ln_az*np.sin(az_r),f['northing']+ln_az*np.cos(az_r)),
+                           xytext=(f['easting'],f['northing']),
+                           arrowprops=dict(arrowstyle='->',color=c_sv,lw=1.5))
+            ax_csv.text(f['easting'],f['northing']-12,f"{f['azimut']:.0f}°/{abs(f['inclinaison']):.0f}°",
+                       fontsize=5.5,ha='center',color='#555')
+        xmx=df_forages['easting'].max(); ymx=df_forages['northing'].max()
+        xmn=df_forages['easting'].min(); ymn=df_forages['northing'].min()
+        ax_csv.annotate('',xy=(xmx+60,ymx+25),xytext=(xmx+60,ymx-20),arrowprops=dict(arrowstyle='->',color='black',lw=2.5))
+        ax_csv.text(xmx+60,ymx+35,'N',ha='center',fontsize=14,fontweight='bold')
+        ax_csv.plot([xmn,xmn+200],[ymn-35,ymn-35],'k-',linewidth=3)
+        ax_csv.text(xmn+100,ymn-50,'200 m',ha='center',fontsize=9,fontweight='bold')
+        lp_sv=[mpatches.Patch(color='#FF5722',label='RC'),mpatches.Patch(color='#2196F3',label='Aircore'),mpatches.Patch(color='#9C27B0',label='Diamond')]
+        ax_csv.legend(handles=lp_sv,loc='lower right',fontsize=9,title='Type forage',framealpha=0.95)
+        ax_csv.set_xlabel("Easting UTM (m)"); ax_csv.set_ylabel("Northing UTM (m)")
+        ax_csv.set_title(f"Carte survey — {NOM_PROSPECT}\nAzimut et inclinaison par trou",fontsize=12,fontweight='bold')
+        ax_csv.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_csv)
+    else:
+        st.markdown("### 💾 Export des données survey")
+        col1,col2=st.columns(2)
+        with col1:
+            st.markdown("**Collars**")
+            st.dataframe(survey_df.head(),use_container_width=True)
+            st.download_button("📥 Collars CSV",data=survey_df.to_csv(index=False),file_name="collars_survey.csv",mime='text/csv')
+        with col2:
+            st.markdown("**Déviation**")
+            st.dataframe(df_dev_survey.head(),use_container_width=True)
+            st.download_button("📥 Déviation CSV",data=df_dev_survey.to_csv(index=False),file_name="deviation_survey.csv",mime='text/csv')
+
+# ══ TAB 16 — DÉTECTEUR DE ROCHES ═════════════════════════════════════════════
+with tabs[16]:
+    st.subheader(f"🔬 Détecteur de Roches — Classification automatique")
+    st.info("🤖 Entrez les paramètres d'un échantillon et l'algorithme identifie la lithologie probable, l'altération et le potentiel aurifère.")
+
+    col1,col2,col3=st.columns(3)
+    with col1:
+        st.markdown("### Paramètres visuels")
+        couleur=st.selectbox("Couleur dominante",['Brun-rouge','Ocre/Jaune','Gris clair','Gris foncé','Blanc/Crème','Doré/Métallique','Noir'])
+        texture=st.selectbox("Texture",['Massive','Feuilletée/Schisteuse','Grenue','Porphyrique','Vacuolaire','Bréchique'])
+        durete=st.slider("Dureté estimée (Mohs)",1,10,5)
+        lustre=st.selectbox("Lustre",['Terne','Vitreux','Métallique','Résineux','Nacré'])
+    with col2:
+        st.markdown("### Paramètres géochimiques")
+        au_det=st.number_input("Au (ppb)",0.0,100000.0,50.0)
+        as_det=st.number_input("As (ppm)",0.0,500.0,10.0)
+        cu_det=st.number_input("Cu (ppm)",0.0,1000.0,20.0)
+        fe_det=st.number_input("Fe (%)",0.0,50.0,5.0)
+        effervescence=st.checkbox("Effervescence à l'acide (HCl)")
+        magnetisme=st.checkbox("Réaction magnétique")
+    with col3:
+        st.markdown("### Paramètres structuraux")
+        foliation=st.checkbox("Foliation/schistosité visible")
+        veines_qtz=st.checkbox("Veines de quartz présentes")
+        pyrite=st.checkbox("Pyrite visible")
+        limonite=st.checkbox("Limonite/goethite (rouille)")
+        profondeur_ech=st.slider("Profondeur échantillon (m)",0,200,10)
+
+    if st.button("🔍 Identifier la roche", type="primary"):
+        # Algorithme de classification
+        score_litho={l:0 for l in LITHOS}
+
+        # Règles de classification
+        if couleur=='Brun-rouge' and limonite: score_litho['Latérite']+=40
+        if couleur=='Ocre/Jaune': score_litho['Saprolite']+=30; score_litho['Latérite']+=20
+        if profondeur_ech<8: score_litho['Latérite']+=30
+        elif profondeur_ech<25: score_litho['Saprolite']+=30
+        elif profondeur_ech<50: score_litho['Saprock']+=30
+        if foliation and texture=='Feuilletée/Schisteuse': score_litho['Bédrock/Schiste']+=40
+        if veines_qtz and au_det>100: score_litho['Quartzite aurifère']+=50
+        if durete>=7 and couleur in ['Blanc/Crème','Gris clair']: score_litho['Quartzite aurifère']+=25
+        if texture=='Grenue' and durete>=6: score_litho['Granite frais']+=35
+        if couleur=='Gris clair' and lustre=='Vitreux' and durete>=6: score_litho['Quartzite aurifère']+=20
+        if effervescence: score_litho['Bédrock/Schiste']+=15
+        if magnetisme: score_litho['Bédrock/Schiste']+=10
+
+        litho_det=max(score_litho,key=score_litho.get)
+        conf_litho=min(95,max(50,score_litho[litho_det]))
+
+        # Altération probable
+        alter_prob='Silicification' if veines_qtz and durete>=7 else \
+                   'Argilisation' if couleur=='Ocre/Jaune' and profondeur_ech<30 else \
+                   'Limonitisation' if limonite else \
+                   'Séricitisation' if foliation else \
+                   'Carbonatation' if effervescence else 'Faible altération'
+
+        # Potentiel aurifère
+        pot_score=0
+        if au_det>=1000: pot_score=5
+        elif au_det>=500: pot_score=4
+        elif au_det>=100: pot_score=3
+        elif au_det>=50: pot_score=2
+        else: pot_score=1
+        if veines_qtz: pot_score+=1
+        if pyrite: pot_score+=1
+        if as_det>20: pot_score+=1
+        pot_score=min(5,pot_score)
+        pot_labels={1:'⭐ Très faible',2:'⭐⭐ Faible',3:'⭐⭐⭐ Moyen',4:'⭐⭐⭐⭐ Bon',5:'⭐⭐⭐⭐⭐ Excellent'}
+
+        st.markdown("---")
+        st.markdown("### 🎯 Résultats de classification")
+        c1,c2,c3=st.columns(3)
+        c1.success(f"**Lithologie identifiée :**\n\n🪨 **{litho_det}**\n\nConfiance : {conf_litho}%")
+        c2.info(f"**Altération probable :**\n\n🔥 **{alter_prob}**")
+        c3.warning(f"**Potentiel aurifère :**\n\n{pot_labels[pot_score]}")
+
+        st.markdown("### 📊 Scores de classification")
+        fig_det,ax_det=plt.subplots(figsize=(10,4))
+        scores_sorted=dict(sorted(score_litho.items(),key=lambda x:x[1],reverse=True))
+        colors_det=[LITHO_COLORS.get(l,'#888') for l in scores_sorted.keys()]
+        bars=ax_det.bar(scores_sorted.keys(),scores_sorted.values(),color=colors_det,edgecolor='black',linewidth=0.5)
+        bars[0].set_edgecolor('red'); bars[0].set_linewidth(2.5)
+        ax_det.set_ylabel("Score de correspondance"); ax_det.set_title("Classification lithologique — Scores par lithologie",fontsize=11,fontweight='bold')
+        plt.xticks(rotation=30,ha='right'); ax_det.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_det)
+
+        st.markdown("### 📋 Recommandations terrain")
+        recs=[]
+        if pot_score>=4: recs.append("✅ Zone à fort potentiel — **Prélever échantillon en double pour analyse en laboratoire**")
+        if veines_qtz: recs.append("✅ Veines de quartz présentes — **Cartographier direction et pendage, mesurer épaisseur**")
+        if pyrite: recs.append("✅ Pyrite visible — **Analyser arsenic et antimoine comme pathfinders aurifères**")
+        if au_det>100: recs.append(f"✅ Au > 100 ppb ({au_det:.0f} ppb) — **Proposer forage de vérification sur cette anomalie**")
+        if profondeur_ech<5: recs.append("ℹ️ Échantillon superficiel — **Approfondir pour éviter biais de l'altération supergène**")
+        if not recs: recs.append("ℹ️ Zone à faible potentiel — Continuer la prospection systématique")
+        for r in recs: st.markdown(r)
+
 
 # ══ TAB 13 — MONITORING ══════════════════════════════════════════════════════
-with tabs[12]:
+with tabs[17]:
     st.subheader("📈 Monitoring")
     c1,c2,c3=st.columns(3)
     c1.metric("Mètres/jour",f"{np.random.randint(30,80)} m","↑ +12"); c2.metric("Trous actifs",int((df_forages['statut']=='En cours').sum())); c3.metric("Incidents",np.random.randint(0,2))
@@ -887,7 +1423,7 @@ with tabs[12]:
     plt.xticks(rotation=45); plt.tight_layout(); st.pyplot(fig_j)
 
 # ══ TAB 14 — WEEKLY ══════════════════════════════════════════════════════════
-with tabs[13]:
+with tabs[18]:
     st.subheader("📅 Weekly Report")
     sem=st.date_input("Semaine du",datetime.date.today()-datetime.timedelta(days=7))
     st.markdown(f"**Période :** {sem} → {sem+datetime.timedelta(days=6)} | **Projet :** {NOM_PROSPECT}")
@@ -904,8 +1440,120 @@ with tabs[13]:
     st.dataframe(wd,use_container_width=True)
     st.download_button("📥 Rapport CSV",data=wd.to_csv(index=False),file_name=f"weekly_{sem}.csv",mime='text/csv')
 
-# ══ TAB 15 — RAPPORT ═════════════════════════════════════════════════════════
-with tabs[14]:
+# ══ TAB 19 — COMMENTAIRES ════════════════════════════════════════════════════
+with tabs[19]:
+    st.subheader(f"💬 Commentaires & Réponses — {NOM_PROSPECT}")
+    st.markdown(f"**{NOM_PERMIS}** | Espace de collaboration géologique")
+
+    # Initialiser les commentaires en session state
+    if 'commentaires' not in st.session_state:
+        st.session_state.commentaires = [
+            {"id":1,"auteur":"Dr. Konaté","role":"Géologue Senior","date":"2024-04-10","sujet":"Section SG003",
+             "message":"L'intersection aurifère à 45m dans SG003 est très prometteuse. Je recommande un forage de confirmation à 50m au NE avec azimut 045° et inclinaison -70°.",
+             "categorie":"Interprétation","priorite":"Haute","reponses":[
+                {"auteur":"Chef de projet","date":"2024-04-11","message":"Approuvé. Planifier SG016 en conséquence pour la semaine prochaine."}]},
+            {"id":2,"auteur":"Mme Diallo","role":"Géochimiste","date":"2024-04-12","sujet":"QAQC Standards",
+             "message":"Les standards du lot ECH-045 montrent une dérive de +15%. Je recommande de vérifier la calibration du laboratoire avant de valider ces résultats.",
+             "categorie":"QAQC","priorite":"Haute","reponses":[]},
+            {"id":3,"auteur":"M. Traoré","role":"Foreur chef","date":"2024-04-13","sujet":"Déviation SG008",
+             "message":"SG008 montre une déviation importante à 80m de profondeur (12m hors cible). Besoin de décision sur la correction ou l'abandon.",
+             "categorie":"Opérationnel","priorite":"Moyenne","reponses":[
+                {"auteur":"Dr. Konaté","date":"2024-04-13","message":"Continuer le forage tel quel. La position reste dans la zone d'intérêt."}]},
+        ]
+
+    # Filtres
+    col1,col2,col3=st.columns(3)
+    with col1:
+        cat_filtre=st.multiselect("Catégorie",['Interprétation','QAQC','Opérationnel','Sécurité','Géologie','Autre'],
+                                   default=['Interprétation','QAQC','Opérationnel','Sécurité','Géologie','Autre'],key='catf')
+    with col2:
+        prio_filtre=st.multiselect("Priorité",['Haute','Moyenne','Faible'],default=['Haute','Moyenne','Faible'],key='priof')
+    with col3:
+        st.metric("Total commentaires",len(st.session_state.commentaires))
+
+    # Afficher commentaires existants
+    st.markdown("### 📝 Fils de discussion")
+    for comm in st.session_state.commentaires:
+        if comm['categorie'] not in cat_filtre or comm['priorite'] not in prio_filtre:
+            continue
+        prio_color={'Haute':'🔴','Moyenne':'🟡','Faible':'🟢'}.get(comm['priorite'],'⚪')
+        cat_icon={'Interprétation':'🔬','QAQC':'✅','Opérationnel':'⚙️','Sécurité':'⚠️','Géologie':'🪨','Autre':'💬'}.get(comm['categorie'],'💬')
+
+        with st.expander(f"{prio_color} {cat_icon} **{comm['sujet']}** — {comm['auteur']} ({comm['role']}) | {comm['date']}"):
+            st.markdown(f"""
+            <div style='background:#E3F2FD;padding:12px;border-radius:8px;border-left:4px solid #2196F3;margin-bottom:8px;'>
+            <b>🗣️ {comm['auteur']}</b> <small>({comm['role']}) — {comm['date']}</small><br><br>
+            {comm['message']}
+            </div>""", unsafe_allow_html=True)
+
+            # Réponses existantes
+            if comm['reponses']:
+                st.markdown("**💬 Réponses :**")
+                for rep in comm['reponses']:
+                    st.markdown(f"""
+                    <div style='background:#F3E5F5;padding:10px;border-radius:8px;border-left:4px solid #9C27B0;margin:4px 0 4px 20px;'>
+                    <b>↩️ {rep['auteur']}</b> <small>— {rep['date']}</small><br>
+                    {rep['message']}
+                    </div>""", unsafe_allow_html=True)
+
+            # Ajouter une réponse
+            rep_key=f"rep_{comm['id']}"
+            auteur_rep=st.text_input("Votre nom",key=f"auteur_{comm['id']}",placeholder="Nom et fonction...")
+            nouvelle_rep=st.text_area("Votre réponse",key=rep_key,placeholder="Écrivez votre réponse...",height=80)
+            if st.button(f"📤 Répondre",key=f"btn_rep_{comm['id']}"):
+                if nouvelle_rep.strip() and auteur_rep.strip():
+                    comm['reponses'].append({
+                        "auteur":auteur_rep,
+                        "date":datetime.date.today().strftime('%Y-%m-%d'),
+                        "message":nouvelle_rep
+                    })
+                    st.success("✅ Réponse ajoutée !"); st.rerun()
+                else:
+                    st.warning("Veuillez entrer votre nom et votre réponse.")
+
+    st.markdown("---")
+    # Nouveau commentaire
+    st.markdown("### ✏️ Nouveau commentaire")
+    with st.form("nouveau_commentaire"):
+        col1,col2,col3=st.columns(3)
+        with col1:
+            nouv_auteur=st.text_input("Votre nom *",placeholder="Prénom Nom")
+            nouv_role=st.text_input("Fonction *",placeholder="Géologue, Foreur...")
+        with col2:
+            nouv_sujet=st.text_input("Sujet *",placeholder="Ex: Section SG005, QAQC lot 12...")
+            nouv_cat=st.selectbox("Catégorie",['Interprétation','QAQC','Opérationnel','Sécurité','Géologie','Autre'])
+        with col3:
+            nouv_prio=st.selectbox("Priorité",['Haute','Moyenne','Faible'])
+            nouv_trou=st.selectbox("Trou concerné (optionnel)",['Aucun']+df_forages['trou'].tolist())
+        nouv_message=st.text_area("Message *",placeholder="Décrivez votre observation, question ou recommandation...",height=120)
+        submitted=st.form_submit_button("📨 Publier le commentaire",type="primary")
+        if submitted:
+            if nouv_auteur.strip() and nouv_message.strip() and nouv_sujet.strip():
+                nouveau={'id':len(st.session_state.commentaires)+1,
+                    'auteur':nouv_auteur,'role':nouv_role,
+                    'date':datetime.date.today().strftime('%Y-%m-%d'),
+                    'sujet':nouv_sujet,'message':nouv_message,
+                    'categorie':nouv_cat,'priorite':nouv_prio,'reponses':[]}
+                if nouv_trou!='Aucun': nouveau['sujet']=f"{nouv_sujet} [{nouv_trou}]"
+                st.session_state.commentaires.append(nouveau)
+                st.success("✅ Commentaire publié avec succès !"); st.rerun()
+            else:
+                st.error("⚠️ Veuillez remplir les champs obligatoires (Nom, Sujet, Message)")
+
+    # Export
+    if len(st.session_state.commentaires)>0:
+        comm_export=[]
+        for c in st.session_state.commentaires:
+            comm_export.append({'ID':c['id'],'Auteur':c['auteur'],'Rôle':c['role'],
+                               'Date':c['date'],'Sujet':c['sujet'],'Message':c['message'],
+                               'Catégorie':c['categorie'],'Priorité':c['priorite'],
+                               'Nb réponses':len(c['reponses'])})
+        df_comm=pd.DataFrame(comm_export)
+        st.download_button("📥 Exporter commentaires",data=df_comm.to_csv(index=False),
+                          file_name=f"commentaires_{NOM_PROSPECT}_{datetime.date.today()}.csv",mime='text/csv')
+
+# ══ TAB 20 — RAPPORT ═════════════════════════════════════════════════════════
+with tabs[20]:
     st.subheader("📄 Rapport Géologique")
     st.markdown(f"**Projet :** {NOM_PROSPECT} | **Permis :** {NOM_PERMIS} | **Date :** {datetime.date.today()}")
     am=df_forages['Au_max_ppb'].max(); amoy=df_forages['Au_max_ppb'].mean()
@@ -955,7 +1603,7 @@ Ceinture de roches vertes birimienne au Sénégal. Contexte favorable aux giseme
 
 
 # ══ TAB 16 — SOP ════════════════════════════════════════════════════════════
-with tabs[15]:
+with tabs[21]:
     st.subheader(f"📘 SOP — Procédures Standard d'Exploration Minière")
     st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS} | Version 1.0 — {datetime.date.today()}")
     st.info("📋 Ces procédures standard (SOP) définissent les bonnes pratiques pour toutes les opérations d'exploration minière sur ce projet.")
@@ -1067,7 +1715,7 @@ with tabs[15]:
     st.download_button("📥 Télécharger SOP complet",data=sop_txt,file_name=f"SOP_{NOM_PROSPECT}_{datetime.date.today()}.txt",mime='text/plain')
 
 # ══ TAB 17 — AUDIT IA ════════════════════════════════════════════════════════
-with tabs[16]:
+with tabs[22]:
     st.subheader("🤖 Audit IA & Corrections Automatiques")
     st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS}")
     st.info("🔍 L'algorithme d'audit analyse automatiquement **toutes les données** du dashboard, détecte les erreurs et propose des corrections.")
