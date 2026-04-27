@@ -209,6 +209,7 @@ tabs=st.tabs([
     "📅 Weekly Report",
     "💬 Commentaires",
     "📄 Rapport géologique",
+    "📁 Logues terrain réels",
     "📘 SOP Exploration",
     "🤖 Audit IA & Corrections",
 ])
@@ -377,6 +378,12 @@ with tabs[3]:
     ax4.set_xlabel("Easting UTM (m)"); ax4.set_ylabel("Northing UTM (m)")
     ax4.set_title(f"Carte structurale — {NOM_PROSPECT}",fontsize=12,fontweight='bold')
     ax4.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig4)
+    with st.expander("📖 Guide d'interprétation — Carte structurale", expanded=False):
+        st.markdown(INTERPRETATIONS["structures"]["intro"])
+        st.markdown("### 🗂️ Interprétation par type de structure")
+        for struct, interp in INTERPRETATIONS["structures"]["guide_couleurs"].items():
+            c = STRUCT_COLORS.get(struct,'#888')
+            st.markdown(f"<span style='background:{c};padding:2px 8px;border-radius:4px;color:white;font-weight:bold;'>{struct}</span> — {interp}", unsafe_allow_html=True)
     st.subheader("📋 Tableau des structures")
     st.dataframe(structures_df[['id','type','direction','pendage','sens_pendage','longueur_m','porteur_miner']].rename(columns={'id':'N°','type':'Type','direction':'Direction(°)','pendage':'Pendage(°)','sens_pendage':'Sens','longueur_m':'Longueur(m)','porteur_miner':'Porteur'}),use_container_width=True)
 
@@ -512,6 +519,9 @@ with tabs[4]:
 with tabs[5]:
     st.subheader(f"⛏️ Auger — {NOM_PROSPECT}")
     st.markdown(f"**{NOM_PERMIS}** | {N_LIGNES} lignes × {N_PTS} trous")
+    with st.expander("📖 Guide d'interprétation — Forage Auger", expanded=False):
+        st.markdown(INTERPRETATIONS["auger"]["intro"])
+        st.markdown(INTERPRETATIONS["auger"]["anomalie_interpretation"])
     aug_vue=st.radio("Module",['Carte planification','Carte anomalie digitalisée','Données Auger','Profils par ligne'],horizontal=True,key='av')
 
     if aug_vue=='Carte planification':
@@ -636,6 +646,9 @@ with tabs[5]:
 # ══ TAB 7 — pXRF ═════════════════════════════════════════════════════════════
 with tabs[6]:
     st.subheader(f"📡 pXRF & Géochimie — {NOM_PROSPECT}")
+    with st.expander("📖 Guide d'interprétation — pXRF & Géochimie", expanded=False):
+        st.markdown(INTERPRETATIONS["pxrf"]["intro"])
+        st.markdown(INTERPRETATIONS["pxrf"]["seuils_pxrf"])
     pv=st.radio("Module",["Vue d'ensemble","Profils pXRF","Carte géochimique","Corrélations","Statistiques"],horizontal=True,key='pv')
 
     if pv=="Vue d'ensemble":
@@ -716,6 +729,9 @@ with tabs[6]:
 # ══ TAB 8 — GÉOPHYSIQUE ══════════════════════════════════════════════════════
 with tabs[7]:
     st.subheader(f"🌊 Géophysique — {NOM_PROSPECT}")
+    with st.expander("📖 Guide d'interprétation — Géophysique", expanded=False):
+        st.markdown(INTERPRETATIONS["geophysique"]["intro"])
+        st.markdown(INTERPRETATIONS["geophysique"]["combinaison"])
     gv=st.radio("Méthode",['IP & Résistivité','Magnétométrie','EM','SP','Synthèse multi-méthodes'],horizontal=True,key='gv')
 
     if gv=='IP & Résistivité':
@@ -762,6 +778,12 @@ with tabs[7]:
 # ══ TAB 9 — SGI ══════════════════════════════════════════════════════════════
 with tabs[8]:
     st.subheader("🧪 Essai SGI")
+    with st.expander("📖 Guide d'interprétation — Essai SGI", expanded=False):
+        st.markdown(INTERPRETATIONS["sgi"]["intro"])
+        st.markdown("### 🔥 Interprétation par type d'altération")
+        for alter, interp in INTERPRETATIONS["sgi"]["alteration_guide"].items():
+            c = ALTER_COLORS.get(alter,'#888')
+            st.markdown(f"<span style='background:{c};padding:2px 8px;border-radius:4px;font-weight:bold;'>{alter}</span> — {interp}", unsafe_allow_html=True)
     col1,col2=st.columns([1,2])
     with col1:
         tsg=st.selectbox("Trou",df_forages['trou'].tolist(),key='sgi')
@@ -805,6 +827,9 @@ with tabs[8]:
 # ══ TAB 10 — ESTIMATION ══════════════════════════════════════════════════════
 with tabs[9]:
     st.subheader("💰 Estimation des Teneurs en Or")
+    with st.expander("📖 Guide d'interprétation — Estimation des teneurs", expanded=False):
+        st.markdown(INTERPRETATIONS["estimation"]["intro"])
+        st.markdown(INTERPRETATIONS["estimation"]["classification_ressources"])
     col1,col2=st.columns([1,2])
     with col1:
         meth=st.selectbox("Méthode",['Moyenne pondérée','IDW','Krigeage'])
@@ -959,6 +984,8 @@ with tabs[11]:
         c1.metric("Infill nécessaires",nb_i)
         c2.metric("Extension",nb_ext_p)
         c3.metric("Budget estimé",f"${ct2:,.0f}")
+    with st.expander("📖 Guide d'interprétation — Planification & Infill", expanded=False):
+        st.markdown(INTERPRETATIONS["planification"]["intro"])
     st.markdown("### 📊 Tableau de planification")
     st.dataframe(df_forages[['trou','type','profondeur','azimut','inclinaison','statut','equipe','Au_max_ppb']],use_container_width=True)
     # Carte infill
@@ -1057,6 +1084,8 @@ with tabs[12]:
             st.markdown(f"Coût : ${sub['cout_usd'].sum():,.0f}")
             st.markdown("---")
 
+    with st.expander("📖 Guide d'interprétation — Programme d'extension", expanded=False):
+        st.markdown(INTERPRETATIONS["extension"]["intro"])
     fp=st.multiselect("Filtrer priorité",['Haute','Moyenne','Faible'],default=['Haute','Moyenne','Faible'],key='fpe')
     st.dataframe(ext_zones[ext_zones['priorite'].isin(fp)],use_container_width=True)
 
@@ -1165,6 +1194,8 @@ with tabs[13]:
 with tabs[14]:
     st.subheader("🔄 Simulation de Déviation — Azimut & Inclinaison")
     col1,col2=st.columns([1,2])
+    with st.expander("📖 Guide d'interprétation — Simulation déviation", expanded=False):
+        st.markdown(INTERPRETATIONS["deviation"]["intro"])
     with col1:
         trou_dev=st.selectbox("Trou à simuler",df_forages['trou'].tolist(),key='tdev')
         f_dev=df_forages[df_forages['trou']==trou_dev].iloc[0]
@@ -1231,6 +1262,8 @@ with tabs[15]:
     st.subheader(f"📍 Survey — Levé des collets de forage")
     st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS}")
 
+    with st.expander("📖 Guide d'interprétation — Survey", expanded=False):
+        st.markdown(INTERPRETATIONS["survey"]["intro"])
     survey_vue=st.radio("Module",['Collars survey','Données de déviation','Carte survey','Export survey'],horizontal=True,key='sv')
 
     # Données survey
@@ -1314,6 +1347,8 @@ with tabs[16]:
     st.subheader(f"🔬 Détecteur de Roches — Classification automatique")
     st.info("🤖 Entrez les paramètres d'un échantillon et l'algorithme identifie la lithologie probable, l'altération et le potentiel aurifère.")
 
+    with st.expander("📖 Guide d'interprétation — Détecteur de roches", expanded=False):
+        st.markdown(INTERPRETATIONS["detecteur"]["intro"])
     col1,col2,col3=st.columns(3)
     with col1:
         st.markdown("### Paramètres visuels")
@@ -1446,6 +1481,8 @@ with tabs[19]:
     st.markdown(f"**{NOM_PERMIS}** | Espace de collaboration géologique")
 
     # Initialiser les commentaires en session state
+    with st.expander("📖 Guide d'utilisation — Commentaires", expanded=False):
+        st.markdown(INTERPRETATIONS["commentaires"]["intro"])
     if 'commentaires' not in st.session_state:
         st.session_state.commentaires = [
             {"id":1,"auteur":"Dr. Konaté","role":"Géologue Senior","date":"2024-04-10","sujet":"Section SG003",
@@ -1556,6 +1593,8 @@ with tabs[19]:
 with tabs[20]:
     st.subheader("📄 Rapport Géologique")
     st.markdown(f"**Projet :** {NOM_PROSPECT} | **Permis :** {NOM_PERMIS} | **Date :** {datetime.date.today()}")
+    with st.expander("📖 Guide d'interprétation — Rapport géologique", expanded=False):
+        st.markdown(INTERPRETATIONS["rapport"]["intro"])
     am=df_forages['Au_max_ppb'].max(); amoy=df_forages['Au_max_ppb'].mean()
     nm=int(df_intervals['mineralisé'].sum()); pm=nm/len(df_intervals)*100
     ld=df_intervals['lithologie'].value_counts().index[0]; ad=df_intervals['alteration'].value_counts().index[0]
@@ -1602,10 +1641,713 @@ Ceinture de roches vertes birimienne au Sénégal. Contexte favorable aux giseme
     st.download_button("📥 Rapport",data=rpt,file_name=f"rapport_{datetime.date.today()}.txt",mime='text/plain')
 
 
-# ══ TAB 16 — SOP ════════════════════════════════════════════════════════════
+# ══ TAB 21 — LOGUES TERRAIN RÉELS ════════════════════════════════════════════
 with tabs[21]:
+    st.subheader("📁 Logues Terrain Réels — RC / Aircore / Diamond / Sols")
+    st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS}")
+    st.info("📂 Chargez vos fichiers Excel terrain pour visualiser automatiquement les logues géologiques.")
+
+    
+import io as _io
+
+# ── INTERPRÉTATIONS AUTOMATIQUES ──────────────────────────────────────────────
+# Dictionnaire d'interprétations automatiques pour chaque onglet
+INTERPRETATIONS = {
+    "sections": {
+        "intro": """
+**📐 Sections géologiques — Guide d'interprétation**
+
+Une section géologique est une coupe verticale du sous-sol qui permet de visualiser la distribution des
+lithologies, des minéralisations et des structures en profondeur. Elle est l'outil fondamental de
+l'exploration minière pour relier les données de forage à un modèle géologique cohérent.
+
+**Comment lire cette section :**
+- Les **couleurs** représentent les différentes lithologies (roches)
+- Les **hachures rouges** indiquent les intervalles minéralisés (Au ≥ seuil ppb)
+- Les **valeurs orange** sont les teneurs en or mesurées par analyse laboratoire
+- Les **lignes pointillées horizontales** marquent les limites géologiques importantes
+- La **ligne noire ondulée** représente la topographie réelle du terrain
+- La **flèche Nord** et l'**échelle** permettent de se repérer géographiquement
+""",
+        "litho_interpretation": {
+            "Latérite": "Zone d'altération superficielle (0–8m) — résidu d'altération chimique intense. Généralement non minéralisée mais peut concentrer les éléments traces en surface.",
+            "Saprolite": "Zone d'altération avancée (8–25m) — la roche est complètement décomposée. Zone critique pour la minéralisation supergène (or secondaire libre).",
+            "Saprock": "Zone de transition (25–50m) — roche partiellement altérée. Souvent le siège de la minéralisation de transition entre oxydé et primaire.",
+            "Bédrock/Schiste": "Roche encaissante principale (>50m) — zone primaire. La minéralisation aurifère orogénique se développe préférentiellement dans les zones de cisaillement de cette unité.",
+            "Quartzite aurifère": "UNITÉ PRINCIPALE MINÉRALISÉE — veines et veinules de quartz aurifère dans des zones de cisaillement. Forte probabilité de teneurs économiques.",
+            "Granite frais": "Intrusion tardi-orogénique — rôle thermique dans le système hydrothermal. Le contact granite/schiste est souvent minéralisé."
+        }
+    },
+    "cartes_litho": {
+        "intro": """
+**🗺️ Carte Lithologique — Guide d'interprétation**
+
+La carte lithologique montre la distribution spatiale des roches à une profondeur donnée.
+Elle permet d'identifier les zonations lithologiques et de guider la planification des forages.
+
+**Lecture de la carte :**
+- Chaque **couleur** correspond à une lithologie spécifique (voir légende)
+- Les **symboles** (triangle=RC, cercle=Aircore, carré=Diamond) indiquent le type de forage
+- Les **zones de couleur chaude** (jaune/or) indiquent le quartzite aurifère → cibles prioritaires
+- La **distribution spatiale** révèle les contacts lithologiques et les structures géologiques
+""",
+        "recommandations": """
+**🎯 Recommandations automatiques :**
+1. **Zones aurifères** (quartzite, or) → Forer des trous de confirmation à 50–100m d'espacement
+2. **Contacts lithologiques** → Zones à surveiller pour la minéralisation de contact
+3. **Zones de schiste** → Investiguer les structures NE-SO pour trouver les zones de cisaillement
+4. **Zones de granite** → Cartographier les contacts pour identifier les apophyses minéralisées
+"""
+    },
+    "anomalie": {
+        "intro": """
+**🌡️ Carte d'Anomalie Géochimique — Guide d'interprétation**
+
+La carte d'anomalie géochimique représente la distribution spatiale des éléments chimiques
+mesurés dans les forages. Elle permet d'identifier les zones à fort potentiel économique.
+
+**Lecture de la carte :**
+- Les **couleurs chaudes** (rouge/orange) indiquent les fortes teneurs → zones anomaliques
+- Les **couleurs froides** (jaune/blanc) indiquent le fond géochimique naturel
+- Les **cercles verts** marquent les trous potentiels dépassant le seuil défini
+- Les **lignes cyan pointillées** représentent les structures porteuses de la minéralisation
+- Les **contours** délimitent les zones à fort potentiel économique
+
+**Éléments pathfinders en contexte aurifère ouest-africain :**
+- **As (Arsenic)** > 20 ppm → indicateur indirect de minéralisation aurifère primaire
+- **Cu (Cuivre)** > 50 ppm → contexte de sulfures associés à l'or
+- **Au (Or)** > 100 ppb → seuil d'anomalie économique, > 500 ppb → minéralisation significative
+""",
+        "seuils": {
+            "Au_ppb": {"faible": 50, "moyen": 100, "fort": 500, "tres_fort": 2000,
+                      "interpretation": "Seuil économique minimal : 100 ppb | Minéralisation significative : 500 ppb | Haute teneur : >2000 ppb"},
+            "As_ppm": {"faible": 10, "moyen": 20, "fort": 50, "tres_fort": 100,
+                      "interpretation": "As > 20 ppm = pathfinder aurifère | As > 50 ppm = zone d'altération hydrothermale intense"},
+            "Cu_ppm": {"faible": 20, "moyen": 50, "fort": 100, "tres_fort": 300,
+                      "interpretation": "Cu > 50 ppm = sulfures significatifs | Cu > 100 ppm = minéralisation cuprifère potentielle"}
+        }
+    },
+    "structures": {
+        "intro": """
+**🏗️ Carte Structurale — Guide d'interprétation**
+
+La carte structurale représente les éléments structuraux (failles, veines, zones de cisaillement)
+qui contrôlent la distribution de la minéralisation dans les gisements orogéniques.
+
+**En contexte aurifère ouest-africain (birimien) :**
+- Les gisements d'or sont **contrôlés par les structures** → les failles et zones de cisaillement
+  sont les drains principaux des fluides minéralisateurs
+- Les **veines de quartz** dans les zones de cisaillement constituent les cibles principales
+- Les **failles inverses** à pendage modéré (30–60°) sont les plus favorables à la minéralisation
+
+**Lecture des symboles :**
+- **Direction/Pendage** (ex: 045°/65°NE) = orientation et inclinaison de la structure
+- **Symbole de pendage** = sens de plongement de la structure
+- **Épaisseur du trait** = intensité de la structure (fort = faille principale)
+""",
+        "guide_couleurs": {
+            "Faille normale": "Faille extensive — pendage généralement fort (>60°). Peut drainer des fluides mais moins favorable que les failles inverses.",
+            "Faille inverse": "STRUCTURE CLÉ — chevauchement compressif. Très favorable à la minéralisation aurifère orogénique.",
+            "Cisaillement": "STRUCTURE PRINCIPALE — zone de déformation ductile-fragile. Principal drain des fluides aurifères en contexte birimien.",
+            "Veine de quartz": "CIBLE DIRECTE — précipitation directe de l'or depuis les fluides hydrothermaux. Analyser systématiquement.",
+            "Zone altérée": "Guide indirect — indique le passage de fluides. Investiguer pour trouver la minéralisation associée."
+        }
+    },
+    "auger": {
+        "intro": """
+**⛏️ Programme Auger — Guide d'interprétation**
+
+Le forage Auger est une méthode de prospection légère utilisée pour échantillonner les horizons
+superficiels (jusqu'à 20–30m) et cartographier les anomalies géochimiques en surface.
+
+**Objectifs du forage Auger :**
+- Cartographier les anomalies géochimiques en surface et dans la zone d'altération
+- Identifier les zones à fort potentiel pour orienter les forages RC et Diamond plus coûteux
+- Définir les limites des anomalies et prioriser les cibles
+
+**Interprétation des statuts :**
+- 🔵 **Foré** — Forage complété avec prélèvement d'échantillons géochimiques → données disponibles
+- 🟢 **En cours** — Forage en progression → résultats partiels
+- 🔴 **Stoppé** — Forage interrompu (cuirasse, roche dure, problème mécanique) → noter la cause
+
+**Facteurs d'arrêt et implications :**
+- Arrêt sur **cuirasse latéritique** → zone de cuirassement intense, peut masquer une anomalie
+- Arrêt sur **roche dure** → contact latérite/saprolite ou saprolite/saprock → noter la profondeur
+""",
+        "anomalie_interpretation": """
+**🌡️ Interprétation des anomalies Auger :**
+- **Au < 50 ppb** → Fond géochimique naturel → pas d'intérêt économique immédiat
+- **Au 50–100 ppb** → Anomalie faible → à surveiller, possible dispersion géochimique
+- **Au 100–500 ppb** → Anomalie significative → recommander forage RC de confirmation
+- **Au > 500 ppb** → Forte anomalie → cible prioritaire → forage RC immédiat recommandé
+- **Au > 2000 ppb** → Anomalie exceptionnelle → forage Diamond prioritaire → ressource potentielle
+
+**Pathfinders associés :**
+- As > 20 ppm corrélé avec Au → confirme le système aurifère
+- As/Au ratio élevé → minéralisation primaire en profondeur probable
+"""
+    },
+    "pxrf": {
+        "intro": """
+**📡 pXRF & Géochimie — Guide d'interprétation**
+
+La spectrométrie de fluorescence X portable (pXRF) permet une analyse multi-élémentaire
+rapide sur le terrain, sans envoi au laboratoire. Elle est utilisée pour guider l'échantillonnage
+et identifier les intervalles prioritaires pour l'analyse en laboratoire.
+
+**Avantages du pXRF :**
+- Résultats immédiats sur le terrain (30 secondes par mesure)
+- Analyse simultanée de 20+ éléments
+- Réduction des coûts d'analyse laboratoire (ciblage des intervalles)
+- Détection des pathfinders (As, Cu, Zn, Pb, Sb)
+
+**Limitations importantes :**
+- Précision inférieure au laboratoire (±15–25% pour l'or)
+- Pas certifié pour les rapports de ressources JORC/NI 43-101
+- Doit être calibré régulièrement avec des standards certifiés
+- Résultats pXRF = guide de terrain, NON = données économiques officielles
+
+**Corrélations importantes :**
+- **Au-As** : corrélation forte (r > 0.7) → As est un excellent pathfinder de l'or
+- **Au-Cu** : corrélation modérée → présence de sulfures mixtes
+- **Au-Fe** : corrélation variable → contexte de magnétite/pyrite
+""",
+        "seuils_pxrf": """
+**Seuils d'interprétation pXRF :**
+| Élément | Fond | Anomalie faible | Anomalie forte | Très fort |
+|---------|------|----------------|----------------|-----------|
+| Au (ppb) | <50 | 50–100 | 100–500 | >500 |
+| As (ppm) | <10 | 10–20 | 20–50 | >50 |
+| Cu (ppm) | <20 | 20–50 | 50–100 | >100 |
+| Fe (%) | <5 | 5–15 | 15–25 | >25 |
+| Zn (ppm) | <30 | 30–100 | 100–300 | >300 |
+"""
+    },
+    "geophysique": {
+        "intro": """
+**🌊 Géophysique — Guide d'interprétation**
+
+La géophysique est une méthode indirecte qui mesure les propriétés physiques du sous-sol pour
+cartographier les structures géologiques et identifier les corps minéralisés sans forage.
+
+**Méthodes utilisées et leur signification :**
+
+🔷 **IP (Polarisation Induite) :**
+- Mesure la capacité du sous-sol à stocker des charges électriques
+- **Forte chargeabilité (>15 msec/V)** → présence de sulfures disséminés (pyrite, chalcopyrite)
+- En contexte aurifère : la pyrite est souvent associée à l'or → IP = guide de forage
+- **Interprétation :** Anomalie IP = zone à sulfures → potentiel aurifère → recommander forage
+
+🔷 **Magnétométrie :**
+- Mesure les variations du champ magnétique terrestre
+- **Anomalie positive** → corps magnétiques (magnétite, basalte, intrusions mafiques)
+- **Anomalie négative** → corps non magnétiques (schistes, quartzites altérés)
+- **Gradient magnétique** → contact lithologique ou faille → zone structurale intéressante
+
+🔷 **EM (Électromagnétique) :**
+- Mesure la conductivité électrique du sous-sol
+- **Forte conductivité** → argiles, zones saturées, sulfures conducteurs (pyrrhotite)
+- **Faible conductivité** → roches résistantes (granite, quartzite frais)
+- Aide à cartographier la profondeur du bedrock et les zones argileuses
+
+🔷 **SP (Potentiel Spontané) :**
+- Mesure les courants électriques naturels dans le sol
+- **SP négatif (< -20 mV)** → corps conducteurs oxydants (sulfures)
+- **SP positif** → zones réductrices ou de circulation d'eau
+- Corrélation SP négatif + anomalie IP = cible de forage prioritaire
+""",
+        "combinaison": """
+**🎯 Interprétation combinée multi-méthodes :**
+
+La puissance de la géophysique réside dans la combinaison des méthodes :
+- **IP + Magnétique élevés** = corps minéralisé à sulfures + magnétite → CIBLE PRIORITAIRE
+- **IP élevé + Résistivité faible** = zone argileuse à sulfures → altération hydrothermale
+- **IP élevé + SP négatif** = sulfures actifs (pyrite oxydante) → minéralisation potentielle
+- **Gradient magnétique + IP** = contact lithologique minéralisé → zone à forer en priorité
+
+**Recommandation de forage basée sur la géophysique :**
+1. Identifier les zones d'anomalie IP > 75ème percentile
+2. Croiser avec les anomalies magnétiques
+3. Valider avec les données géochimiques pXRF/laboratoire
+4. Planifier les forages perpendiculairement aux structures
+"""
+    },
+    "sgi": {
+        "intro": """
+**🧪 Essai SGI (Semi-Quantitative Geological Interpretation) — Guide d'interprétation**
+
+L'essai SGI est une méthode d'interprétation systématique des données de forage qui permet
+d'évaluer le potentiel minéralisateur de chaque intervalle en croisant lithologie, altération,
+minéralisation et géochimie.
+
+**Paramètres évalués :**
+1. **Lithologie** → certaines lithologies sont plus favorables à la minéralisation
+2. **Altération** → le type et l'intensité de l'altération indiquent la proximité du système hydrothermal
+3. **Minéralisation** → type de sulfures et association minéralogique
+4. **Géochimie** → teneurs Au, As, Cu confirmant le potentiel économique
+
+**Séquence d'altération typique autour d'un gisement aurifère orogénique :**
+```
+Distal → Proximal → Zone minéralisée
+Carbonatation → Séricitisation → Silicification + Pyrite → OR
+```
+
+**Interprétation automatique des intervalles :**
+- 🟡 **Intervalle minéralisé** (Au ≥ seuil) → priorité pour l'analyse laboratoire et la modélisation
+- ⬜ **Intervalle stérile** → fond géochimique → pas d'intérêt économique direct
+""",
+        "alteration_guide": {
+            "Silicification": "🔴 ALTÉRATION PROXIMALE — forte silicification = zone la plus proche du gisement. Forte probabilité de minéralisation aurifère. PRIORISER pour l'analyse.",
+            "Séricitisation": "🟠 ALTÉRATION INTERMÉDIAIRE — séricite + quartz = altération hydrothermale significative. Souvent associée à la minéralisation aurifère dans les schistes.",
+            "Argilisation": "🟡 ALTÉRATION DISTALE — argilisation intense = zone d'altération supergène ou hydrothermale distale. Peut indiquer une minéralisation en profondeur.",
+            "Carbonatation": "🟢 ALTÉRATION DISTALE — carbonatation (ankérite, calcite) = fluides hydrothermaux de basse température. Guide vers des zones plus enrichies.",
+            "Chloritisation": "🔵 ALTÉRATION DISTALE-INTERMÉDIAIRE — chlorite = contexte métamorphique régional. Moins directement liée à la minéralisation aurifère.",
+            "Épidotisation": "⚪ ALTÉRATION RÉGIONALE — épidote = métamorphisme de contact ou altération régionale. Contexte moins favorable à la minéralisation."
+        }
+    },
+    "estimation": {
+        "intro": """
+**💰 Estimation des Teneurs — Guide d'interprétation**
+
+L'estimation des teneurs est une étape critique de l'exploration minière qui permet de quantifier
+le contenu en métal d'un gisement et d'évaluer sa viabilité économique.
+
+**Méthodes d'estimation disponibles :**
+
+📊 **Moyenne pondérée (Weighted Average) :**
+- Simple et transparente — pondère les teneurs par la longueur des intervalles
+- Utilisée pour les ressources présumées (Inferred) à faible densité de données
+- Formule : Teneur moyenne = Σ(teneur × longueur) / Σ(longueur)
+- **Avantage :** facile à vérifier manuellement | **Limitation :** ne tient pas compte de la continuité spatiale
+
+📊 **Inverse Distance (IDW) :**
+- Attribue plus de poids aux points proches — interpolation spatiale
+- Adaptée pour les ressources présumées à présumées (Inferred à Indicated)
+- **Avantage :** prend en compte la position des forages | **Limitation :** tendance au "bull's eye" effect
+
+📊 **Krigeage (Kriging) :**
+- Méthode géostatistique optimale — utilise le variogramme pour modéliser la continuité
+- Standard de l'industrie pour les ressources mesurées et indiquées (Measured & Indicated)
+- Requiert un variogramme calé sur les données réelles
+- **Avantage :** BLUE (Best Linear Unbiased Estimator) | **Limitation :** nécessite suffisamment de données
+
+**Teneur de coupure (Cut-off grade) :**
+La teneur de coupure est la teneur minimale en dessous de laquelle l'extraction n'est pas rentable.
+Elle dépend du prix de l'or, des coûts opérationnels et du type de gisement.
+
+Valeurs typiques en Afrique de l'Ouest :
+- **Open pit** : 0.3–0.5 g/t Au (300–500 ppb)
+- **Souterrain** : 2–3 g/t Au (2000–3000 ppb)
+""",
+        "classification_ressources": """
+**Classification des ressources minérales (code JORC 2012 / NI 43-101) :**
+
+| Catégorie | Espacement forages | Confiance | Description |
+|-----------|-------------------|-----------|-------------|
+| **Inferred** (Présumée) | >200m | Faible | Données insuffisantes pour haute confiance |
+| **Indicated** (Indiquée) | 50–200m | Modérée | Données suffisantes pour estimation fiable |
+| **Measured** (Mesurée) | <50m | Haute | Données denses, continuité bien établie |
+
+**Attention :** Ces estimations sont des simulations sur données synthétiques.
+Pour une estimation officielle, faire appel à une personne qualifiée (QP/CP).
+"""
+    },
+    "planification": {
+        "intro": """
+**📋 Planification & Infill/Extension — Guide d'interprétation**
+
+La planification des forages est une étape stratégique qui optimise l'allocation du budget
+d'exploration pour maximiser l'information géologique obtenue.
+
+**Types de forages :**
+
+🔵 **Forages d'infill (densification) :**
+- Objectif : augmenter la confiance dans les ressources existantes
+- Convertir Inferred → Indicated → Measured
+- Réduire l'espacement des forages dans les zones déjà connues
+- Critère : espacement cible = 1/2 à 1/3 de la portée du variogramme
+
+🔴 **Forages d'extension :**
+- Objectif : étendre les limites connues du gisement
+- Tester les prolongements latéraux et en profondeur
+- Suivre les structures géologiques porteuses au-delà des zones connues
+
+**Calcul du budget :**
+Budget = Nb forages × Profondeur moyenne × Coût/mètre
+- RC : 80–150 USD/m | Aircore : 40–80 USD/m | Diamond : 150–300 USD/m
+
+**Recommandations automatiques :**
+1. Prioriser les zones à fort potentiel (Au > 200 ppb) pour l'infill
+2. Orienter les extensions perpendiculairement aux structures porteuses
+3. Alterner RC (rapide/moins cher) et Diamond (plus d'information) selon la phase
+"""
+    },
+    "extension": {
+        "intro": """
+**🔭 Programme d'Extension — Guide d'interprétation**
+
+Le programme d'extension vise à évaluer le potentiel des zones non encore forées
+autour des ressources connues. C'est une étape cruciale pour augmenter la taille du gisement.
+
+**Priorisation des zones d'extension :**
+- 🔴 **Haute priorité** → anomalie géophysique + géochimique confirmée → forer immédiatement
+- 🟡 **Priorité moyenne** → anomalie partielle ou géologie favorable → forer après les hautes priorités
+- 🔵 **Faible priorité** → géologie favorable sans anomalie confirmée → forer en dernier
+
+**Facteurs de décision pour l'extension :**
+1. **Continuité des structures** → les failles/veines se prolongent-elles au-delà des forages existants ?
+2. **Anomalies géophysiques** → IP ou magnétique anomalique dans la zone d'extension ?
+3. **Géochimie de surface** → anomalie sol ou Auger dans la direction d'extension ?
+4. **Modèle géologique** → la lithologie favorable continue-t-elle en profondeur ?
+
+**Analyse risque/bénéfice :**
+- **Bénéfice** = Au prévu (ppb) × longueur potentielle × épaisseur estimée
+- **Risque** = coût du forage ÷ probabilité de succès géologique
+- **ROI** = bénéfice potentiel ÷ coût total du programme
+"""
+    },
+    "deviation": {
+        "intro": """
+**🔄 Simulation de Déviation — Guide d'interprétation**
+
+La déviation de forage est le phénomène par lequel la trajectoire réelle d'un forage
+s'écarte de la trajectoire planifiée. C'est un problème courant qui peut compromettre
+les objectifs géologiques du forage.
+
+**Causes de la déviation :**
+1. **Anisotropie de la roche** → les foliations et fractures dévient naturellement le trépan
+2. **Changements de lithologie** → les contacts lithologiques peuvent dévier le forage
+3. **Type de trépan** → certains trépans sont plus susceptibles de dévier
+4. **Angle d'inclinaison** → les forages peu inclinés (<60°) dévient plus facilement
+5. **Vitesse de rotation** → vitesse trop élevée augmente la déviation
+
+**Tolérances acceptables (normes industrie) :**
+- ✅ **< 10m de déviation** → dans les tolérances normales → continuer
+- 🟡 **10–25m de déviation** → surveillance renforcée → mesurer tous les 15m
+- 🔴 **> 25m de déviation** → hors tolérance → arrêter et corriger (wedge, déviation contrôlée)
+
+**Mesure de la déviation :**
+- **Recommandée :** tous les 30m de profondeur minimum
+- **Instruments :** Reflex EZ-Trac (gyroscopique), Acid tube, Multishot
+- **Données enregistrées :** azimut réel, inclinaison réelle à chaque point de mesure
+
+**Impact sur l'interprétation géologique :**
+Une déviation non corrigée peut entraîner une mauvaise position de l'intersection
+avec la zone minéralisée cible → écart pouvant atteindre 30–50m en profondeur.
+"""
+    },
+    "survey": {
+        "intro": """
+**📍 Survey — Guide d'interprétation**
+
+Le survey (levé) est l'ensemble des mesures géodésiques qui définissent précisément
+la position et l'orientation des forages dans l'espace. C'est la base de toute
+interprétation géologique fiable.
+
+**Types de données survey :**
+
+📌 **Collar survey (levé du collet) :**
+- Position GPS du point d'entrée du forage en surface
+- Précision requise : ≤ 1m en XY, ≤ 0.5m en Z (élévation)
+- Instrument : GPS différentiel (DGPS) ou RTK
+- Datum : WGS84, projection UTM (zone 28N pour le Sénégal)
+
+📌 **Déviation survey (levé de déviation) :**
+- Mesure de la trajectoire réelle du forage en profondeur
+- Fréquence minimale : tous les 30m de profondeur
+- Données : azimut et inclinaison à chaque point de mesure
+- Instruments : Reflex EZ-Trac (gyroscopique), Acid tube
+
+**Importance du survey :**
+- Sans survey précis → erreurs de corrélation entre forages → mauvaise estimation des ressources
+- Un écart de 5° en azimut peut entraîner une erreur de 15m sur 150m de profondeur
+- Toutes les données de ressources officielles (JORC/NI 43-101) requièrent des surveys validés
+"""
+    },
+    "detecteur": {
+        "intro": """
+**🔬 Détecteur de Roches — Guide d'interprétation**
+
+Le détecteur de roches est un outil d'aide à la classification lithologique rapide sur le terrain.
+Il combine des observations visuelles (couleur, texture, dureté) et géochimiques (pXRF) pour
+identifier automatiquement le type de roche et son potentiel aurifère.
+
+**Paramètres de classification :**
+
+🔵 **Paramètres visuels :**
+- **Couleur** → indicateur du degré d'altération et de la minéralogie
+- **Texture** → grenue (plutonique), foliée (métamorphique), massive (magmatique)
+- **Dureté (Mohs)** → 1-3 = argile/saprolite, 4-6 = schiste, 7-10 = quartzite/granite
+
+🔵 **Paramètres diagnostiques :**
+- **Effervescence à l'acide** → présence de carbonates (calcaire, dolomie, ankérite)
+- **Magnétisme** → magnétite → contexte mafique/métamorphique
+- **Veines de quartz** → INDICATEUR CLÉ → potentiel aurifère direct
+- **Pyrite visible** → sulfures → systèmes hydrothermaux → contexte aurifère
+
+**Confiance de la classification :**
+- > 80% → classification fiable → confirmer par analyse labo
+- 60–80% → classification probable → nécessite vérification terrain
+- < 60% → incertain → envoyer échantillon au laboratoire pour identification pétrographique
+"""
+    },
+    "commentaires": {
+        "intro": """
+**💬 Commentaires & Réponses — Guide d'utilisation**
+
+Cet espace collaboratif permet à toute l'équipe géologique de partager des observations,
+questions et recommandations en temps réel, directement liées aux données du projet.
+
+**Bonnes pratiques pour les commentaires géologiques :**
+
+✅ **Un bon commentaire doit contenir :**
+1. **Référence au trou/section** → préciser le numéro de trou, la profondeur, la zone
+2. **Observation factuelle** → décrire ce qui est observé (pas une interprétation vague)
+3. **Interprétation** → proposer une explication géologique basée sur les faits
+4. **Recommandation** → proposer une action concrète (nouveau forage, analyse, etc.)
+
+**Exemples de bons commentaires :**
+- ✅ "SG008, 45–48m : intersection quartzite aurifère avec pyrite disséminée 5%. Au = 850 ppb. Recommande forage de confirmation à 50m au NE, Az 045°, Inc -65°."
+- ✅ "QAQC lot ECH-045 : standard CRM-Au-12 montre dérive de +18% → recalibration labo requise avant validation des résultats."
+
+**Priorités des commentaires :**
+- 🔴 **Haute** → action requise immédiatement (résultat exceptionnel, problème QAQC, sécurité)
+- 🟡 **Moyenne** → action dans la semaine (optimisation programme, question technique)
+- 🟢 **Faible** → information utile sans urgence (observation géologique, amélioration)
+"""
+    },
+    "rapport": {
+        "intro": """
+**📄 Rapport Géologique — Guide d'interprétation**
+
+Le rapport géologique synthétise toutes les données d'exploration pour fournir une
+évaluation complète du potentiel économique du projet à une date donnée.
+
+**Structure d'un rapport d'exploration conforme JORC/NI 43-101 :**
+1. Résumé exécutif (Executive Summary)
+2. Contexte géologique régional
+3. Géologie locale et modèle de gisement
+4. Méthodes d'exploration (forage, géophysique, géochimie)
+5. Contrôle qualité (QAQC)
+6. Résultats et interprétations
+7. Conclusions et recommandations
+8. Budget et planning
+
+**Standards de reporting :**
+- **JORC 2012** (Joint Ore Reserves Committee) → standard australien et international
+- **NI 43-101** (National Instrument) → standard canadien
+- **SAMREC** → standard sud-africain
+- Tous requièrent une **Personne Qualifiée (QP/CP)** pour valider les ressources
+"""
+    },
+    "sop": {
+        "intro": """
+**📘 SOP (Standard Operating Procedures) — Guide d'utilisation**
+
+Les procédures standard d'opération (SOP) sont des documents qui décrivent pas à pas
+les protocoles à suivre pour chaque activité d'exploration minière.
+
+**Pourquoi les SOP sont essentielles :**
+1. **Reproductibilité** → même résultat quel que soit l'opérateur ou le moment
+2. **Traçabilité** → chaque action est documentée et vérifiable
+3. **Conformité** → respect des normes JORC/NI 43-101 pour le reporting des ressources
+4. **Sécurité** → réduction des risques d'accidents et d'incidents
+5. **Qualité des données** → données fiables = décisions d'investissement correctes
+
+**Documents obligatoires sur le terrain :**
+- Fiches terrain (Drill Log, Sample Tag, Chain of Custody)
+- Registres QAQC (insertion des standards, blancs, duplicatas)
+- Registres de sécurité (HSE, PTW, JSA)
+- Registres de forage (Drill Report quotidien)
+"""
+    },
+    "audit": {
+        "intro": """
+**🤖 Audit IA — Guide d'interprétation**
+
+L'algorithme d'audit analyse automatiquement toutes les données du dashboard pour détecter
+les erreurs, incohérences et anomalies qui pourraient compromettre la qualité des données
+et l'intégrité des rapports de ressources.
+
+**Catégories d'erreurs détectées :**
+
+🔴 **CRITIQUE (Score -5 à -8 points) :**
+- Coordonnées GPS manquantes ou aberrantes
+- Chevauchement d'intervalles (From > To suivant)
+- Trou absent du collar mais présent dans les intervalles
+- Valeurs géochimiques négatives
+
+🟠 **ERREUR (Score -2 à -4 points) :**
+- Azimut ou inclinaison hors plage (0–360° et -90° à 0°)
+- Intervalles dépassant la profondeur du forage
+- Valeurs IP ou magnétiques aberrantes
+
+🟡 **AVERTISSEMENT (Score -1 à -2 points) :**
+- Trous manquants dans le programme Auger
+- Lacunes entre intervalles
+- Inclinaison suspecte mais dans la plage acceptable
+
+**Score de qualité :**
+- ✅ 80–100 → Données de haute qualité → prêtes pour le reporting
+- 🟡 60–79 → Qualité acceptable → corriger les erreurs avant le reporting
+- 🔴 < 60 → Qualité insuffisante → révision complète des données requise avant tout reporting officiel
+
+**Corrections automatiques appliquées :**
+- Valeurs négatives → remplacées par la limite de détection (LOD)
+- Signalement des doublons et chevauchements
+- Validation de la complétude du programme
+"""
+    }
+}
+
+
+
+# ══ TAB 21 — LOGUES TERRAIN RÉELS ════════════════════════════════
+with tabs[21]:
+    log_type_r=st.radio("Type de log",['RC Géologique','Aircore Géologique','Diamond Drilling','Géochimie Sols','Structural Log'],horizontal=True,key='ltr')
+    label_map_r={'RC Géologique':'Log-RC_Geologique_Complet_ND.xlsx','Aircore Géologique':'Log-AC_Geologique_Complet_ND.xlsx',
+               'Diamond Drilling':'Log-DD_Geologique_Complet_ND.xlsx','Géochimie Sols':'Log_Geochimie_Sols_AG.xlsx',
+               'Structural Log':'logging_structural.xlsx'}
+
+    col1r,col2r=st.columns([1,3])
+    with col1r:
+        st.markdown(f"**Fichier attendu :**\n`{label_map_r[log_type_r]}`")
+        uploaded_log_r=st.file_uploader("📂 Charger le fichier Excel",type=['xlsx'],key=f'ul_{log_type_r}')
+        if uploaded_log_r: st.success(f"✅ {uploaded_log_r.name}")
+
+    with col2r:
+        if uploaded_log_r is not None:
+            file_bytes_r=uploaded_log_r.read()
+            try:
+                xl_r=pd.read_excel(_io.BytesIO(file_bytes_r),sheet_name=None,header=None)
+                sheets_r=list(xl_r.keys())
+                st.markdown(f"**Feuilles :** {', '.join(sheets_r)}")
+                sheet_r=st.selectbox("Feuille",sheets_r,key='sr')
+                df_raw_r=xl_r[sheet_r]
+                headers_r=[str(h) if str(h)!='nan' else f'Col{i}' for i,h in enumerate(df_raw_r.iloc[0].tolist())]
+                df_main_r=df_raw_r.iloc[1:].copy(); df_main_r.columns=headers_r
+                df_main_r=df_main_r.dropna(how='all').reset_index(drop=True)
+                col_sond_r=next((c for c in df_main_r.columns if any(x in c.lower() for x in ['sondage','hole','id','bhid'])),None)
+                col_from_r=next((c for c in df_main_r.columns if c.lower() in ['from','de','from_m','depth_from']),None)
+                col_to_r=next((c for c in df_main_r.columns if c.lower() in ['to','a','to_m','depth_to']),None)
+                col_litho_r=next((c for c in df_main_r.columns if 'litho' in c.lower()),None)
+                col_au_r=next((c for c in df_main_r.columns if 'au' in c.lower() and any(x in c.lower() for x in ['ppb','ppm','labo'])),None)
+                col_alter_r=next((c for c in df_main_r.columns if 'alter' in c.lower()),None)
+                col_coul_r=next((c for c in df_main_r.columns if any(x in c.lower() for x in ['coul','color'])),None)
+                col_dur_r=next((c for c in df_main_r.columns if any(x in c.lower() for x in ['dur','hard'])),None)
+                if col_sond_r:
+                    sonds_r=df_main_r[col_sond_r].dropna().unique().tolist()
+                    sg_r=st.selectbox("Sondage",sonds_r,key='sgr')
+                    df_sg_r=df_main_r[df_main_r[col_sond_r]==sg_r].copy()
+                else:
+                    df_sg_r=df_main_r.copy(); sg_r="Tous"
+                c1r,c2r,c3r,c4r=st.columns(4)
+                c1r.metric("Intervalles",len(df_sg_r)); c2r.metric("Colonnes",len(df_sg_r.columns))
+                if col_to_r:
+                    try: c3r.metric("Prof. max",f"{pd.to_numeric(df_sg_r[col_to_r],errors='coerce').max():.1f}m")
+                    except: pass
+                if col_au_r:
+                    try:
+                        au_nr=pd.to_numeric(df_sg_r[col_au_r],errors='coerce').dropna()
+                        c4r.metric("Au max",f"{au_nr.max():.1f} ppb" if len(au_nr)>0 else "N/A")
+                    except: pass
+                sub_ltr=st.tabs(["📋 Données","📊 Logue visuel","🔍 Analyse","📤 Export"])
+                with sub_ltr[0]:
+                    st.dataframe(df_sg_r,use_container_width=True)
+                    for sn_r in sheets_r:
+                        if sn_r!=sheet_r:
+                            df_s2r=xl_r[sn_r]; h2r=[str(h) if str(h)!='nan' else f'Col{i}' for i,h in enumerate(df_s2r.iloc[0].tolist())]
+                            df_s2cr=df_s2r.iloc[1:].copy(); df_s2cr.columns=h2r; df_s2cr=df_s2cr.dropna(how='all')
+                            with st.expander(f"📄 {sn_r}"): st.dataframe(df_s2cr,use_container_width=True)
+                with sub_ltr[1]:
+                    if col_from_r and col_to_r:
+                        litho_cl={'Laterite':'#8B4513','Latérite':'#8B4513','Saprolite':'#DAA520','Saprock':'#CD853F',
+                                  'Schiste':'#696969','Quartzite':'#FFD700','Granite':'#708090','Basalte':'#2F4F4F','Sol':'#2D5016'}
+                        cols_vr=[('Lithologie',col_litho_r),('Couleur',col_coul_r),('Altération',col_alter_r)]
+                        cols_vr=[cv for cv in cols_vr if cv[1]]
+                        ncvr=max(1,len(cols_vr))+(1 if col_au_r else 0)+(1 if col_dur_r else 0)
+                        fig_lvr,axes_lvr=plt.subplots(1,ncvr,figsize=(3.2*ncvr,12),sharey=True)
+                        if ncvr==1: axes_lvr=[axes_lvr]
+                        civr=0
+                        for label_vr,col_vr in cols_vr:
+                            for _,row in df_sg_r.iterrows():
+                                try:
+                                    de=float(str(row[col_from_r]).replace(',','.') or 0); a=float(str(row[col_to_r]).replace(',','.') or de+1)
+                                    val=str(row.get(col_vr,'') if col_vr else '')
+                                    cl='#BBBBBB'
+                                    if 'litho' in label_vr.lower():
+                                        for k,v in litho_cl.items():
+                                            if k.lower() in val.lower(): cl=v; break
+                                    axes_lvr[civr].fill_betweenx([de,a],0,1,color=cl,alpha=0.85)
+                                    axes_lvr[civr].plot([0,1],[de,de],'k-',linewidth=0.3)
+                                    axes_lvr[civr].text(0.5,(de+a)/2,val[:10],ha='center',va='center',fontsize=5.5,fontweight='bold')
+                                    if civr==0: axes_lvr[civr].text(-0.05,de,f"{de}m",ha='right',fontsize=5)
+                                except: pass
+                            axes_lvr[civr].set_title(label_vr,fontsize=9,fontweight='bold'); axes_lvr[civr].set_xticks([])
+                            if civr==0: axes_lvr[civr].set_ylabel("Profondeur (m)")
+                            civr+=1
+                        if col_au_r:
+                            frvr=[]; tovr=[]; auvr=[]
+                            for _,row in df_sg_r.iterrows():
+                                try: frvr.append(float(str(row[col_from_r]).replace(',','.') or 0)); tovr.append(float(str(row[col_to_r]).replace(',','.') or 0)); auvr.append(float(str(row[col_au_r]).replace(',','.') or 0))
+                                except: pass
+                            if auvr:
+                                mivr=[(f+t)/2 for f,t in zip(frvr,tovr)]; htvr=[(t-f)*0.8 for f,t in zip(frvr,tovr)]
+                                c_auvr=['#FFD700' if v>=100 else '#EEE' for v in auvr]
+                                axes_lvr[civr].barh(mivr,auvr,height=htvr,color=c_auvr,edgecolor='orange',linewidth=0.4)
+                                axes_lvr[civr].axvline(x=100,color='red',linestyle='--',linewidth=1.5,label='100ppb')
+                                axes_lvr[civr].set_xlabel("Au (ppb)"); axes_lvr[civr].set_title("Or",fontsize=9,fontweight='bold'); axes_lvr[civr].legend(fontsize=7); civr+=1
+                        for ax in axes_lvr:
+                            if ax.get_ylim()[0]<ax.get_ylim()[1]: ax.invert_yaxis()
+                        lp_lvr=[mpatches.Patch(color=v,label=k) for k,v in litho_cl.items()]
+                        axes_lvr[0].legend(handles=lp_lvr,loc='lower right',fontsize=6,title='Lithologie',framealpha=0.9)
+                        plt.suptitle(f"Logue {log_type_r} — {sg_r}\n{NOM_PROSPECT}",fontsize=11,fontweight='bold')
+                        plt.tight_layout(); st.pyplot(fig_lvr)
+                    else:
+                        st.warning(f"Colonnes From/To non détectées. Colonnes : {list(df_sg_r.columns)}")
+                with sub_ltr[2]:
+                    if col_litho_r:
+                        lcr=df_sg_r[col_litho_r].value_counts()
+                        fig_lcr,ax_lcr=plt.subplots(figsize=(8,4))
+                        ax_lcr.barh(lcr.index.astype(str),lcr.values,color=['#8B4513','#DAA520','#696969','#FFD700','#708090','#CD853F','#2F4F4F'][:len(lcr)],edgecolor='black',linewidth=0.5)
+                        ax_lcr.set_xlabel("Intervalles"); ax_lcr.set_title("Distribution lithologique",fontsize=11,fontweight='bold'); ax_lcr.grid(True,linestyle=':',alpha=0.4); plt.tight_layout(); st.pyplot(fig_lcr)
+                    if col_au_r:
+                        df_mr=df_sg_r.copy(); df_mr['Au_n']=pd.to_numeric(df_mr[col_au_r],errors='coerce')
+                        df_mp=df_mr[df_mr['Au_n']>=100]
+                        cols_sh=[c for c in [col_from_r,col_to_r,col_litho_r,col_au_r] if c]
+                        if len(df_mp)>0:
+                            st.dataframe(df_mp[cols_sh],use_container_width=True)
+                            st.success(f"**{len(df_mp)} intervalles minéralisés** | Au max : {df_mr['Au_n'].max():.1f} ppb")
+                        else: st.info("Aucun intervalle Au ≥ 100 ppb")
+                with sub_ltr[3]:
+                    for sn_r in sheets_r:
+                        df_er=xl_r[sn_r]; h_er=[str(h) if str(h)!='nan' else f'Col{i}' for i,h in enumerate(df_er.iloc[0].tolist())]
+                        df_er2=df_er.iloc[1:].copy(); df_er2.columns=h_er; df_er2=df_er2.dropna(how='all')
+                        st.download_button(f"📥 {sn_r}",data=df_er2.to_csv(index=False),file_name=f"{sn_r}_{sg_r}.csv",mime='text/csv',key=f'ex_{sn_r}')
+            except Exception as e:
+                st.error(f"Erreur : {e}")
+                import traceback; st.code(traceback.format_exc())
+        else:
+            st.markdown(f"""
+            ### 📂 Chargez votre fichier terrain
+
+            | Fichier | Type |
+            |---------|------|
+            | `Log-RC_Geologique_Complet_ND.xlsx` | RC |
+            | `Log-AC_Geologique_Complet_ND.xlsx` | Aircore |
+            | `Log-DD_Geologique_Complet_ND.xlsx` | Diamond |
+            | `Log_Geochimie_Sols_AG.xlsx` | Sols |
+            | `logging_structural.xlsx` | Structural |
+
+            **Fonctionnalités :** Tableau données · Logue visuel automatique · Analyse des intervalles · Export CSV
+            """)
+
+# ══ TAB 22 — SOP ════════════════════════════════════════════════════════════
+with tabs[22]:
     st.subheader(f"📘 SOP — Procédures Standard d'Exploration Minière")
     st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS} | Version 1.0 — {datetime.date.today()}")
+    with st.expander("📖 Pourquoi les SOP sont essentielles", expanded=False):
+        st.markdown(INTERPRETATIONS["sop"]["intro"])
     st.info("📋 Ces procédures standard (SOP) définissent les bonnes pratiques pour toutes les opérations d'exploration minière sur ce projet.")
 
     SOP_DATA = {
@@ -1715,11 +2457,13 @@ with tabs[21]:
     st.download_button("📥 Télécharger SOP complet",data=sop_txt,file_name=f"SOP_{NOM_PROSPECT}_{datetime.date.today()}.txt",mime='text/plain')
 
 # ══ TAB 17 — AUDIT IA ════════════════════════════════════════════════════════
-with tabs[22]:
+with tabs[23]:
     st.subheader("🤖 Audit IA & Corrections Automatiques")
     st.markdown(f"**{NOM_PROSPECT}** | {NOM_PERMIS}")
     st.info("🔍 L'algorithme d'audit analyse automatiquement **toutes les données** du dashboard, détecte les erreurs et propose des corrections.")
 
+    with st.expander("📖 Guide d'interprétation — Audit IA", expanded=False):
+        st.markdown(INTERPRETATIONS["audit"]["intro"])
     if st.button("🚀 Lancer l'audit complet", type="primary"):
         with st.spinner("Analyse en cours... Vérification de tous les modules..."):
             import time; time.sleep(1)
